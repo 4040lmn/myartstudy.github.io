@@ -3,8 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>学習ノート</title>
+  <title>MyArtStudy</title>
   <link rel="manifest" href="study-note-manifest.webmanifest" />
+  <link rel="icon" href="study-note-icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="study-note-icon.svg" />
   <style>
     :root {
       color-scheme: dark;
@@ -179,9 +181,11 @@
       color: var(--muted);
       text-transform: uppercase;
       display: flex;
+      align-items: center;
       justify-content: space-between;
       gap: 12px;
       margin-bottom: 10px;
+      min-width: 0;
     }
 
     .brand h1 {
@@ -238,6 +242,7 @@
       padding: 0;
       display: grid;
       place-items: center;
+      flex: 0 0 35px;
     }
 
     .icon-btn img {
@@ -430,16 +435,29 @@
       box-shadow: var(--shadow);
       padding: 14px;
       display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: 1fr;
       gap: 12px;
       align-items: center;
+    }
+
+    .topbar .brand-kicker {
+      margin-bottom: 0;
+      flex-wrap: nowrap;
+    }
+
+    #updatedAt {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .mode-tabs {
       display: flex;
       gap: 8px;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       justify-content: flex-end;
+      flex: 0 0 auto;
     }
 
     .tab {
@@ -821,10 +839,6 @@
         grid-template-columns: 1fr;
       }
 
-      .mode-tabs {
-        justify-content: stretch;
-      }
-
       .tab {
         flex: 1;
       }
@@ -877,7 +891,7 @@
 
       <div class="toolbar">
         <button class="btn primary icon-btn" id="newBtn" title="新規ノート" aria-label="新規ノート">
-          <img src="https://icooon-mono.com/i/icon_00105/icon_001050.svg" alt="" />
+          <img src="https://icooon-mono.com/i/icon_11095/icon_110950.svg" alt="" />
         </button>
       </div>
 
@@ -889,16 +903,15 @@
         <div>
           <div class="brand-kicker">
             <span id="updatedAt">最終更新: --</span>
+            <div class="mode-tabs">
+              <button class="btn icon-btn edit-only" id="saveBtn" title="保存" aria-label="保存">
+                <img src="https://icooon-mono.com/i/icon_15148/icon_151480.svg" alt="" />
+              </button>
+              <button class="btn danger icon-btn edit-only" id="deleteBtn" title="削除" aria-label="削除">
+                <img src="https://icooon-mono.com/i/icon_00055/icon_000550.svg" alt="" />
+              </button>
+            </div>
           </div>
-        </div>
-
-        <div class="mode-tabs">
-          <button class="btn icon-btn edit-only" id="saveBtn" title="保存" aria-label="保存">
-            <img src="https://icooon-mono.com/i/icon_15148/icon_151480.svg" alt="" />
-          </button>
-          <button class="btn danger icon-btn edit-only" id="deleteBtn" title="削除" aria-label="削除">
-            <img src="https://icooon-mono.com/i/icon_00055/icon_000550.svg" alt="" />
-          </button>
         </div>
       </header>
 

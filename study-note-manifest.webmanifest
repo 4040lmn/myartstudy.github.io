@@ -1,6 +1,6 @@
 {
-  "name": "学習ノート",
-  "short_name": "学習ノート",
+  "name": "MyArtStudy",
+  "short_name": "MyArtStudy",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
