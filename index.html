@@ -921,6 +921,7 @@
     let imageResolveTimer = 0;
     let googleTokenClient = null;
     let googleAccessToken = "";
+    let pendingGoogleSave = false;
     let confirmResolver = null;
     let cleanNotesJson = JSON.stringify(notes);
 
@@ -1062,7 +1063,7 @@
       return updated;
     }
 
-    function saveNote() {
+    async function saveNote() {
       const updated = readForm();
       if (!updated) return;
 
@@ -1074,6 +1075,7 @@
       persistNotes();
       switchMode("edit");
       render();
+      await syncToGoogleDrive();
     }
 
     async function deleteNote() {
@@ -1546,6 +1548,10 @@
             googleAccessToken = tokenResponse.access_token;
             els.googleSaveBtn.disabled = false;
             updateGoogleStatus("GOOGLE: SIGNED IN");
+            if (pendingGoogleSave) {
+              pendingGoogleSave = false;
+              syncToGoogleDrive();
+            }
           } else {
             updateGoogleStatus("GOOGLE: LOGIN FAILED");
           }
@@ -1565,21 +1571,20 @@
       googleTokenClient.requestAccessToken({ prompt: googleAccessToken ? "" : "consent" });
     }
 
-    async function saveToGoogleDrive() {
-      if (!googleAccessToken) {
-        requestGoogleLogin();
-        return;
-      }
+    async function findGoogleNotesFile() {
+      const query = encodeURIComponent("name = 'study-notes.json' and trashed = false");
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}&spaces=drive&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`, {
+        headers: {
+          Authorization: "Bearer " + googleAccessToken
+        }
+      });
 
-      const current = readForm();
-      if (current) {
-        current.updatedAt = nowISO();
-        notes = notes.map(note => note.id === current.id ? current : note);
-        persistNotes();
-        dirty = false;
-        updateSaveStatus();
-      }
+      if (!response.ok) throw new Error("drive list failed");
+      const data = await response.json();
+      return data.files?.[0] ?? null;
+    }
 
+    async function uploadGoogleNotesFile(fileId = "") {
       const metadata = {
         name: "study-notes.json",
         mimeType: "application/json"
@@ -1597,17 +1602,50 @@
         `--${boundary}--`
       ].join("\r\n");
 
-      updateGoogleStatus("GOOGLE: SAVING");
-      const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
-        method: "POST",
+      const endpoint = fileId
+        ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
+        : "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
+
+      return fetch(endpoint, {
+        method: fileId ? "PATCH" : "POST",
         headers: {
           Authorization: "Bearer " + googleAccessToken,
           "Content-Type": "multipart/related; boundary=" + boundary
         },
         body
       });
+    }
 
-      updateGoogleStatus(response.ok ? "GOOGLE: SAVED" : "GOOGLE: SAVE FAILED");
+    async function syncToGoogleDrive() {
+      if (!googleAccessToken) {
+        pendingGoogleSave = true;
+        updateGoogleStatus("GOOGLE: LOGIN REQUIRED");
+        requestGoogleLogin();
+        return;
+      }
+
+      try {
+        updateGoogleStatus("GOOGLE: SYNCING");
+        const existing = await findGoogleNotesFile();
+        const response = await uploadGoogleNotesFile(existing?.id ?? "");
+        updateGoogleStatus(response.ok ? "GOOGLE: SYNCED" : "GOOGLE: SYNC FAILED");
+      } catch {
+        updateGoogleStatus("GOOGLE: SYNC FAILED");
+      }
+    }
+
+    async function saveToGoogleDrive() {
+      const current = readForm();
+      if (current) {
+        current.updatedAt = nowISO();
+        notes = notes.map(note => note.id === current.id ? current : note);
+        persistNotes();
+        dirty = false;
+        updateSaveStatus();
+        render();
+      }
+
+      await syncToGoogleDrive();
     }
 
     function render() {
