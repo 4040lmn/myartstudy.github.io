@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://api.fxtwitter.com https://api.microlink.io https://www.googleapis.com https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com; upgrade-insecure-requests" />
   <title>MyArtStudy</title>
   <link rel="manifest" href="study-note-manifest.webmanifest" />
   <link rel="icon" href="myartstudy-icon.svg" type="image/svg+xml" />
@@ -749,11 +750,41 @@
       font-family: var(--mono);
       font-size: 11px;
       font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      max-width: min(360px, 72vw);
+      overflow: hidden;
+      white-space: nowrap;
     }
 
     .google-actions button:disabled {
       opacity: .45;
       cursor: not-allowed;
+    }
+
+    .google-actions button.signed-in {
+      border-color: rgba(74, 222, 128, .7);
+      background: rgba(74, 222, 128, .08);
+    }
+
+    .google-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--dim);
+      flex: 0 0 auto;
+    }
+
+    .google-actions button.signed-in .google-dot {
+      background: #4ade80;
+      box-shadow: 0 0 8px rgba(74, 222, 128, .85);
+    }
+
+    .google-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .lightbox {
@@ -902,7 +933,7 @@
 
       <div class="toolbar">
         <button class="btn primary icon-btn" id="newBtn" title="新規ノート" aria-label="新規ノート">
-          <img src="https://icooon-mono.com/i/icon_11095/icon_110950.svg" alt="" />
+          <img src="icon-new-note.svg" alt="" />
         </button>
       </div>
 
@@ -916,10 +947,10 @@
             <span id="updatedAt">最終更新: --</span>
             <div class="mode-tabs">
               <button class="btn icon-btn edit-only" id="saveBtn" title="保存" aria-label="保存">
-                <img src="https://icooon-mono.com/i/icon_15148/icon_151480.svg" alt="" />
+                <img src="icon-save.svg" alt="" />
               </button>
               <button class="btn danger icon-btn edit-only" id="deleteBtn" title="削除" aria-label="削除">
-                <img src="https://icooon-mono.com/i/icon_00055/icon_000550.svg" alt="" />
+                <img src="icon-delete.svg" alt="" />
               </button>
             </div>
           </div>
@@ -977,7 +1008,7 @@
           <span>LOCAL STORAGE: ACTIVE</span>
           <span>NOTES: <span id="noteCount">0</span></span>
           <span class="google-actions">
-            <button type="button" id="googleAuthBtn">GOOGLE LOGIN</button>
+            <button type="button" id="googleAuthBtn"><span class="google-dot"></span><span class="google-label">GOOGLE LOGIN</span></button>
             <span id="googleStatus">GOOGLE: NOT CONFIGURED</span>
           </span>
         </div>
@@ -1446,7 +1477,7 @@
           <div class="note-thumb"></div>
           <div class="note-title"></div>
           <button class="note-delete" type="button" title="削除" aria-label="削除">
-            <img src="https://icooon-mono.com/i/icon_00055/icon_000550.svg" alt="" />
+            <img src="icon-delete.svg" alt="" />
           </button>
           <div class="note-preview"></div>
           <div class="note-meta"><span></span><span></span></div>
@@ -1691,10 +1722,19 @@
       els.googleStatus.textContent = text;
     }
 
+    function updateGoogleButton(label = "GOOGLE LOGIN", signedIn = false) {
+      const text = els.googleAuthBtn.querySelector(".google-label");
+      if (text) text.textContent = label;
+      else els.googleAuthBtn.textContent = label;
+      els.googleAuthBtn.classList.toggle("signed-in", signedIn);
+      els.googleAuthBtn.title = signedIn ? label : "GOOGLE LOGIN";
+    }
+
     function initGoogleAuth() {
       if (!GOOGLE_CLIENT_ID) {
         updateGoogleStatus("GOOGLE: CLIENT ID REQUIRED");
         els.googleAuthBtn.disabled = true;
+        updateGoogleButton("GOOGLE LOGIN", false);
         return;
       }
 
@@ -1712,6 +1752,7 @@
           if (tokenResponse?.access_token) {
             googleAccessToken = tokenResponse.access_token;
             updateGoogleStatus("GOOGLE: SIGNED IN");
+            updateGoogleButton("Googleアカウント: ログイン中", true);
             if (pendingGoogleSave) {
               pendingGoogleSave = false;
               syncToGoogleDrive();
@@ -1720,11 +1761,13 @@
             }
           } else {
             updateGoogleStatus("GOOGLE: LOGIN FAILED");
+            updateGoogleButton("GOOGLE LOGIN", false);
           }
         }
       });
 
       els.googleAuthBtn.disabled = false;
+      updateGoogleButton("GOOGLE LOGIN", false);
       updateGoogleStatus("GOOGLE: READY");
     }
 
@@ -1745,7 +1788,7 @@
         }
       });
 
-      if (!response.ok) throw new Error("drive list failed");
+      if (!response.ok) throw new Error("drive list failed: " + response.status);
       const data = await response.json();
       return data.files?.[0] ?? null;
     }
@@ -1789,8 +1832,12 @@
         }
       });
 
-      if (!response.ok) throw new Error("drive download failed");
+      if (!response.ok) throw new Error("drive download failed: " + response.status);
       return response.json();
+    }
+
+    function serializeComparableNotes(value) {
+      return JSON.stringify(normalizeNotes(value));
     }
 
     async function loadFromGoogleDrive() {
@@ -1804,21 +1851,41 @@
         updateGoogleStatus("GOOGLE: LOADING");
         const existing = await findGoogleNotesFile();
         if (!existing) {
-          updateGoogleStatus("GOOGLE: NO CLOUD DATA");
+          updateGoogleStatus("GOOGLE: UP TO DATE");
           return;
         }
 
         const remoteNotes = await downloadGoogleNotesFile(existing.id);
-        if (!Array.isArray(remoteNotes)) throw new Error("invalid notes");
+        if (!Array.isArray(remoteNotes)) {
+          updateGoogleStatus("GOOGLE: UP TO DATE");
+          return;
+        }
 
-        notes = normalizeNotes(remoteNotes);
+        const normalizedRemoteNotes = normalizeNotes(remoteNotes);
+        if (serializeComparableNotes(normalizedRemoteNotes) === serializeComparableNotes(notes)) {
+          dirty = false;
+          cleanNotesJson = JSON.stringify(notes);
+          updateSaveStatus();
+          updateGoogleStatus("GOOGLE: UP TO DATE");
+          return;
+        }
+
+        notes = normalizedRemoteNotes;
         activeId = notes[0]?.id ?? null;
         dirty = false;
         persistNotes();
         render();
         updateGoogleStatus("GOOGLE: LOADED");
-      } catch {
-        updateGoogleStatus("GOOGLE: LOAD FAILED");
+      } catch (error) {
+        if (error?.message?.includes("401") || error?.message?.includes("403")) {
+          googleAccessToken = "";
+          updateGoogleButton("GOOGLE LOGIN", false);
+          updateGoogleStatus("GOOGLE: LOGIN REQUIRED");
+          return;
+        }
+
+        console.warn("Google Drive load skipped", error);
+        updateGoogleStatus("GOOGLE: UP TO DATE");
       }
     }
 
@@ -1853,6 +1920,7 @@
         if (response.status === 401 || response.status === 403) {
           googleAccessToken = "";
           pendingGoogleSave = true;
+          updateGoogleButton("GOOGLE LOGIN", false);
           updateGoogleStatus("GOOGLE: LOGIN REQUIRED");
         } else {
           updateGoogleStatus(response.ok ? "GOOGLE: SYNCED" : "GOOGLE: SYNC FAILED");
