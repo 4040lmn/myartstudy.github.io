@@ -71,9 +71,9 @@
       z-index: 20;
       width: var(--rail);
       min-height: 100svh;
-      border-right: 1px solid var(--line);
-      background: rgba(10, 10, 10, .92);
-      backdrop-filter: blur(10px);
+      border-right: 1px solid transparent;
+      background: transparent;
+      backdrop-filter: none;
       padding: clamp(8px, 1.8vw, 12px) clamp(4px, 1vw, 8px);
       display: flex;
       flex-direction: column;
@@ -89,21 +89,18 @@
       inset: 0 auto 0 0;
       padding: 18px;
       align-items: stretch;
-      box-shadow: 18px 0 40px rgba(0, 0, 0, .55);
+      background: transparent;
+      box-shadow: none;
     }
 
     .app:not(.sidebar-collapsed)::after {
-      content: "";
-      position: fixed;
-      inset: 0;
-      z-index: 10;
-      background: transparent;
-      pointer-events: none;
+      content: none;
     }
 
     .app.sidebar-collapsed .sidebar {
       padding: clamp(8px, 1.8vw, 12px) clamp(4px, 1vw, 8px);
       align-items: center;
+      overflow: hidden;
     }
 
     .sidebar-toggle {
@@ -116,6 +113,7 @@
       display: grid;
       place-items: center;
       font-weight: 900;
+      box-shadow: var(--shadow);
     }
 
     .brand,
@@ -123,6 +121,13 @@
     .search,
     .note-list {
       display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
     }
 
     .app:not(.sidebar-collapsed) .brand,
@@ -130,6 +135,10 @@
     .app:not(.sidebar-collapsed) .search,
     .app:not(.sidebar-collapsed) .note-list {
       display: flex !important;
+      width: auto !important;
+      height: auto !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
     }
 
     .app:not(.sidebar-collapsed) .brand {
@@ -145,6 +154,11 @@
     .app.sidebar-collapsed .search,
     .app.sidebar-collapsed .note-list {
       display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      overflow: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
     }
 
     .brand {
@@ -275,6 +289,14 @@
       flex-direction: column;
       gap: 10px;
       padding-right: 3px;
+    }
+
+    .app:not(.sidebar-collapsed) .note-list {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(8, 8, 8, .84);
+      padding: 10px;
+      box-shadow: var(--shadow);
     }
 
     .note-card {
@@ -1834,7 +1856,7 @@
     });
     els.app.addEventListener("click", event => {
       if (els.app.classList.contains("sidebar-collapsed")) return;
-      if (event.target.closest(".sidebar")) return;
+      if (event.target.closest(".sidebar-toggle, .brand, .toolbar, .note-list")) return;
       setSidebarCollapsed(true);
     });
     els.lightboxClose.addEventListener("click", closeLightbox);
