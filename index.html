@@ -1557,6 +1557,7 @@
       googleTokenClient = google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CLIENT_ID,
         scope: GOOGLE_DRIVE_SCOPE,
+        include_granted_scopes: true,
         callback: tokenResponse => {
           if (tokenResponse?.access_token) {
             googleAccessToken = tokenResponse.access_token;
@@ -1577,13 +1578,13 @@
       updateGoogleStatus("GOOGLE: READY");
     }
 
-    function requestGoogleLogin() {
+    function requestGoogleLogin(forceConsent = false) {
       if (!googleTokenClient) {
         initGoogleAuth();
         return;
       }
 
-      googleTokenClient.requestAccessToken({ prompt: googleAccessToken ? "" : "consent" });
+      googleTokenClient.requestAccessToken({ prompt: forceConsent ? "consent" : "" });
     }
 
     async function findGoogleNotesFile() {
@@ -1699,7 +1700,13 @@
         updateGoogleStatus("GOOGLE: SYNCING");
         const existing = await findGoogleNotesFile();
         const response = await uploadGoogleNotesFile(existing?.id ?? "");
-        updateGoogleStatus(response.ok ? "GOOGLE: SYNCED" : "GOOGLE: SYNC FAILED");
+        if (response.status === 401 || response.status === 403) {
+          googleAccessToken = "";
+          pendingGoogleSave = true;
+          updateGoogleStatus("GOOGLE: LOGIN REQUIRED");
+        } else {
+          updateGoogleStatus(response.ok ? "GOOGLE: SYNCED" : "GOOGLE: SYNC FAILED");
+        }
       } catch {
         updateGoogleStatus("GOOGLE: SYNC FAILED");
       } finally {
@@ -1782,7 +1789,7 @@
     els.lightbox.addEventListener("click", event => {
       if (event.target === els.lightbox) closeLightbox();
     });
-    els.googleAuthBtn.addEventListener("click", requestGoogleLogin);
+    els.googleAuthBtn.addEventListener("click", () => requestGoogleLogin(false));
 
     document.addEventListener("keydown", event => {
       if (event.key === "Escape" && !els.lightbox.classList.contains("hidden")) {
