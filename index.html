@@ -89,8 +89,9 @@
       inset: 0 auto 0 0;
       padding: 18px;
       align-items: stretch;
-      background: transparent;
-      box-shadow: none;
+      background: #101010;
+      border-right: 1px solid var(--line);
+      box-shadow: 10px 0 24px rgba(0, 0, 0, .28);
     }
 
     .app:not(.sidebar-collapsed)::after {
@@ -411,6 +412,7 @@
     }
 
     .main {
+      grid-column: 2;
       min-width: 320px;
       padding: 24px;
       display: flex;
