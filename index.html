@@ -529,9 +529,36 @@
 
     .image-controls {
       display: grid;
-      grid-template-columns: 1fr auto;
       gap: 10px;
-      align-items: end;
+    }
+
+    .image-source-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .source-tab {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #111;
+      color: var(--muted);
+      padding: 7px 11px;
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .source-tab.active {
+      background: #f1f1f1;
+      border-color: #fff;
+      color: #050505;
+    }
+
+    .image-source-panel {
+      display: none;
+    }
+
+    .image-source-panel.active {
+      display: block;
     }
 
     .upload-btn {
@@ -879,13 +906,19 @@
         <form class="editor" id="editor">
 
           <div class="image-controls">
-            <div class="field">
+            <div class="image-source-tabs" role="tablist" aria-label="画像入力方法">
+              <button class="source-tab active" id="urlSourceTab" type="button">URL</button>
+              <button class="source-tab" id="uploadSourceTab" type="button">UPLOAD</button>
+            </div>
+            <div class="field image-source-panel active" id="urlSourcePanel">
               <label for="imageUrlInput">外部URL / 画像URL</label>
               <input id="imageUrlInput" type="url" placeholder="https://x.com/user/status/123 または画像URL" />
             </div>
-            <label class="upload-btn" for="fileInput">UPLOAD
-              <input class="file-input" id="fileInput" type="file" accept="image/*" multiple />
-            </label>
+            <div class="image-source-panel" id="uploadSourcePanel">
+              <label class="upload-btn" for="fileInput">画像を選択
+                <input class="file-input" id="fileInput" type="file" accept="image/*" multiple />
+              </label>
+            </div>
           </div>
 
           <div class="image-stage" id="imageStage">
@@ -970,6 +1003,10 @@
       noteCount: document.getElementById("noteCount"),
       imageUrl: document.getElementById("imageUrlInput"),
       fileInput: document.getElementById("fileInput"),
+      urlSourceTab: document.getElementById("urlSourceTab"),
+      uploadSourceTab: document.getElementById("uploadSourceTab"),
+      urlSourcePanel: document.getElementById("urlSourcePanel"),
+      uploadSourcePanel: document.getElementById("uploadSourcePanel"),
       imageStage: document.getElementById("imageStage"),
       imageStatus: document.getElementById("imageStatus"),
       firstImpression: document.getElementById("firstImpressionInput"),
@@ -1000,6 +1037,9 @@
     let googleSyncInFlight = false;
     let confirmResolver = null;
     let cleanNotesJson = JSON.stringify(notes);
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartedOnInput = false;
 
     function uid() {
       return "note-" + Date.now().toString(36);
@@ -1137,6 +1177,14 @@
       };
       updated.title = getNoteTitle(updated);
       return updated;
+    }
+
+    function switchImageSource(source) {
+      const isUrl = source === "url";
+      els.urlSourceTab.classList.toggle("active", isUrl);
+      els.uploadSourceTab.classList.toggle("active", !isUrl);
+      els.urlSourcePanel.classList.toggle("active", isUrl);
+      els.uploadSourcePanel.classList.toggle("active", !isUrl);
     }
 
     async function saveNote() {
@@ -1439,6 +1487,8 @@
     function writeForm(note) {
       els.imageUrl.value = note?.imageUrl ?? "";
       els.fileInput.value = "";
+      const hasUploadedImage = (note?.images ?? []).some(image => image.type === "file");
+      switchImageSource(note?.imageUrl || !hasUploadedImage ? "url" : "upload");
       els.firstImpression.value = note?.firstImpression ?? "";
       els.composition.value = note?.composition ?? "";
       els.color.value = note?.color ?? "";
@@ -1530,6 +1580,7 @@
       const urls = await Promise.all(files.map(fileToDataUrl));
       setActiveImages("", urls, "file");
       els.imageUrl.value = "";
+      switchImageSource("upload");
       renderImageStage(getActiveNote());
       updatePreview();
       renderNoteList();
@@ -1575,6 +1626,7 @@
       scheduleGoogleSync();
 
       if (payload.url) {
+        switchImageSource("url");
         els.imageUrl.value = payload.url;
         resolveCurrentUrlImages();
       }
@@ -1843,6 +1895,8 @@
 
     els.imageUrl.addEventListener("input", scheduleImageResolve);
     els.fileInput.addEventListener("change", handleFileUpload);
+    els.urlSourceTab.addEventListener("click", () => switchImageSource("url"));
+    els.uploadSourceTab.addEventListener("click", () => switchImageSource("upload"));
 
     els.newBtn.addEventListener("click", async () => {
       if (dirty && !await askConfirm("未保存の変更を破棄して新規ノートを作成しますか？", "作成")) return;
@@ -1864,6 +1918,23 @@
       if (event.target.closest(".sidebar-toggle, .brand, .toolbar, .note-list")) return;
       setSidebarCollapsed(true);
     });
+    document.addEventListener("touchstart", event => {
+      const touch = event.changedTouches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      touchStartedOnInput = Boolean(event.target.closest("input, textarea, button"));
+    }, { passive: true });
+    document.addEventListener("touchend", event => {
+      if (touchStartedOnInput) return;
+      const touch = event.changedTouches[0];
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+      const horizontal = Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.4;
+      if (!horizontal) return;
+
+      if (dx < 0) setSidebarCollapsed(false);
+      if (dx > 0) setSidebarCollapsed(true);
+    }, { passive: true });
     els.lightboxClose.addEventListener("click", closeLightbox);
     els.lightbox.addEventListener("click", event => {
       if (event.target === els.lightbox) closeLightbox();
