@@ -21,6 +21,8 @@
       --focus: #ffffff;
       --shadow: 0 0 0 1px #252525, 0 20px 60px rgba(0, 0, 0, .45);
       --radius: 16px;
+      --rail: clamp(38px, 5.4vw, 56px);
+      --rail-button: clamp(30px, 4.4vw, 40px);
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -53,13 +55,13 @@
 
     .app {
       display: grid;
-      grid-template-columns: 56px minmax(320px, 1fr);
+      grid-template-columns: var(--rail) minmax(320px, 1fr);
       min-height: 100svh;
       overflow-x: hidden;
     }
 
     .app.sidebar-collapsed {
-      grid-template-columns: 56px minmax(320px, 1fr);
+      grid-template-columns: var(--rail) minmax(320px, 1fr);
     }
 
     .sidebar {
@@ -67,12 +69,12 @@
       left: 0;
       top: 0;
       z-index: 20;
-      width: 56px;
+      width: var(--rail);
       min-height: 100svh;
       border-right: 1px solid var(--line);
       background: rgba(10, 10, 10, .92);
       backdrop-filter: blur(10px);
-      padding: 12px 8px;
+      padding: clamp(8px, 1.8vw, 12px) clamp(4px, 1vw, 8px);
       display: flex;
       flex-direction: column;
       gap: 14px;
@@ -99,7 +101,7 @@
     }
 
     .app.sidebar-collapsed .sidebar {
-      padding: 12px 8px;
+      padding: clamp(8px, 1.8vw, 12px) clamp(4px, 1vw, 8px);
       align-items: center;
     }
 
@@ -108,8 +110,8 @@
       color: var(--text);
       background: #111;
       border-radius: 12px;
-      width: 40px;
-      height: 40px;
+      width: var(--rail-button);
+      height: var(--rail-button);
       display: grid;
       place-items: center;
       font-weight: 900;
@@ -732,11 +734,11 @@
 
     @media (max-width: 920px) {
       .app {
-        grid-template-columns: 56px minmax(320px, 1fr);
+        grid-template-columns: var(--rail) minmax(320px, 1fr);
       }
 
       .app.sidebar-collapsed {
-        grid-template-columns: 56px minmax(320px, 1fr);
+        grid-template-columns: var(--rail) minmax(320px, 1fr);
       }
 
       .sidebar {
@@ -768,11 +770,11 @@
 
     @media (max-width: 520px) {
       .app {
-        grid-template-columns: 56px minmax(320px, 1fr);
+        grid-template-columns: var(--rail) minmax(320px, 1fr);
       }
 
       .app.sidebar-collapsed {
-        grid-template-columns: 56px minmax(320px, 1fr);
+        grid-template-columns: var(--rail) minmax(320px, 1fr);
       }
 
       .app:not(.sidebar-collapsed) .sidebar {
