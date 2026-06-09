@@ -22,7 +22,7 @@
       --shadow: 0 0 0 1px #252525, 0 20px 60px rgba(0, 0, 0, .45);
       --radius: 16px;
       --rail: clamp(38px, 5.4vw, 56px);
-      --rail-button: clamp(30px, 4.4vw, 40px);
+      --rail-button: clamp(24px, 3.5vw, 32px);
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -40,6 +40,7 @@
         var(--bg);
       color: var(--text);
       font-family: var(--sans);
+      font-size: 80%;
       letter-spacing: .02em;
     }
 
@@ -216,7 +217,7 @@
 
     .toolbar {
       display: grid;
-      grid-template-columns: 44px;
+      grid-template-columns: 35px;
       gap: 8px;
     }
 
@@ -232,16 +233,16 @@
     }
 
     .icon-btn {
-      width: 44px;
-      height: 44px;
+      width: 35px;
+      height: 35px;
       padding: 0;
       display: grid;
       place-items: center;
     }
 
     .icon-btn img {
-      width: 20px;
-      height: 20px;
+      width: 16px;
+      height: 16px;
       display: block;
       filter: invert(1);
     }
@@ -308,7 +309,7 @@
       border-radius: 14px;
       padding: 13px;
       display: grid;
-      grid-template-columns: 74px 1fr 32px;
+      grid-template-columns: 59px 1fr 26px;
       gap: 8px;
       text-align: left;
       color: inherit;
@@ -317,7 +318,7 @@
     }
 
     .note-thumb {
-      width: 74px;
+      width: 59px;
       aspect-ratio: 1;
       border: 1px solid var(--line-soft);
       border-radius: 10px;
@@ -385,8 +386,8 @@
     .note-delete {
       grid-column: 3;
       grid-row: 1;
-      width: 32px;
-      height: 32px;
+      width: 26px;
+      height: 26px;
       border: 1px solid rgba(255, 77, 77, .4);
       border-radius: 10px;
       background: #111;
@@ -396,8 +397,8 @@
     }
 
     .note-delete img {
-      width: 16px;
-      height: 16px;
+      width: 13px;
+      height: 13px;
       filter: invert(1);
       display: block;
     }
@@ -416,7 +417,7 @@
     .main {
       grid-column: 2;
       min-width: 320px;
-      padding: 24px;
+      padding: 24px 24px 24px 4px;
       display: flex;
       flex-direction: column;
       gap: 16px;
@@ -585,12 +586,12 @@
       border-radius: 999px;
       background: rgba(8, 8, 8, .88);
       color: var(--text);
-      width: 30px;
-      height: 30px;
+      width: 24px;
+      height: 24px;
       display: grid;
       place-items: center;
       padding: 0;
-      font-size: 18px;
+      font-size: 14px;
       line-height: 1;
     }
 
@@ -722,13 +723,13 @@
       position: fixed;
       top: 16px;
       right: 16px;
-      width: 42px;
-      height: 42px;
+      width: 34px;
+      height: 34px;
       border: 1px solid var(--line);
       border-radius: 999px;
       background: #111;
       color: var(--text);
-      font-size: 22px;
+      font-size: 18px;
       line-height: 1;
     }
 
@@ -784,7 +785,7 @@
       }
 
       .main {
-        padding: 14px;
+        padding: 14px 14px 14px 4px;
       }
 
       .topbar,
@@ -817,7 +818,7 @@
       }
 
       .toolbar {
-        grid-template-columns: 44px;
+        grid-template-columns: 35px;
       }
 
       .image-controls {
