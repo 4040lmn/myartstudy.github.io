@@ -736,11 +736,44 @@
 
     @media (max-width: 520px) {
       .app {
-        grid-template-columns: 260px minmax(320px, 1fr);
+        grid-template-columns: 56px minmax(320px, 1fr);
+        overflow-x: hidden;
       }
 
       .app.sidebar-collapsed {
         grid-template-columns: 56px minmax(320px, 1fr);
+      }
+
+      .sidebar {
+        position: sticky;
+        left: 0;
+        top: 0;
+        z-index: 20;
+        width: 56px;
+        min-height: 100svh;
+        padding: 12px 8px;
+        align-items: center;
+      }
+
+      .app:not(.sidebar-collapsed) .sidebar {
+        position: fixed;
+        width: min(300px, calc(100vw - 28px));
+        inset: 0 auto 0 0;
+        padding: 12px;
+        align-items: stretch;
+        box-shadow: 18px 0 40px rgba(0, 0, 0, .55);
+      }
+
+      .app:not(.sidebar-collapsed)::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        background: rgba(0, 0, 0, .48);
+      }
+
+      .app:not(.sidebar-collapsed) .main {
+        grid-column: 2;
       }
 
       .toolbar {
@@ -1784,6 +1817,12 @@
     });
     els.sidebarToggle.addEventListener("click", () => {
       setSidebarCollapsed(!els.app.classList.contains("sidebar-collapsed"));
+    });
+    els.app.addEventListener("click", event => {
+      if (window.innerWidth > 520) return;
+      if (els.app.classList.contains("sidebar-collapsed")) return;
+      if (event.target.closest(".sidebar")) return;
+      setSidebarCollapsed(true);
     });
     els.lightboxClose.addEventListener("click", closeLightbox);
     els.lightbox.addEventListener("click", event => {
