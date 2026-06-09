@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MyArtStudy</title>
   <link rel="manifest" href="study-note-manifest.webmanifest" />
-  <link rel="icon" href="study-note-icon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="study-note-icon.svg" />
+  <link rel="icon" href="myartstudy-icon.svg" type="image/svg+xml" />
+  <link rel="shortcut icon" href="myartstudy-icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="myartstudy-icon.svg" />
   <style>
     :root {
       color-scheme: dark;
@@ -591,6 +592,16 @@
       font-weight: 800;
       font-size: 12px;
       white-space: nowrap;
+      cursor: pointer;
+      transition: background .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
+    }
+
+    .upload-btn:hover,
+    .upload-btn:focus-within {
+      background: #f1f1f1;
+      border-color: #fff;
+      color: #050505;
+      transform: translateY(-1px);
     }
 
     .file-input {

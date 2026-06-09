@@ -8,7 +8,7 @@
   "theme_color": "#070707",
   "icons": [
     {
-      "src": "study-note-icon.svg",
+      "src": "myartstudy-icon.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
