@@ -97,7 +97,8 @@
       position: fixed;
       inset: 0;
       z-index: 10;
-      background: rgba(0, 0, 0, .38);
+      background: transparent;
+      pointer-events: none;
     }
 
     .app.sidebar-collapsed .sidebar {
@@ -121,22 +122,29 @@
     .toolbar,
     .search,
     .note-list {
-      display: none;
+      display: none !important;
     }
 
     .app:not(.sidebar-collapsed) .brand,
     .app:not(.sidebar-collapsed) .toolbar,
     .app:not(.sidebar-collapsed) .search,
     .app:not(.sidebar-collapsed) .note-list {
-      display: flex;
+      display: flex !important;
     }
 
     .app:not(.sidebar-collapsed) .brand {
-      display: block;
+      display: block !important;
     }
 
     .app:not(.sidebar-collapsed) .toolbar {
-      display: grid;
+      display: grid !important;
+    }
+
+    .app.sidebar-collapsed .brand,
+    .app.sidebar-collapsed .toolbar,
+    .app.sidebar-collapsed .search,
+    .app.sidebar-collapsed .note-list {
+      display: none !important;
     }
 
     .brand {
