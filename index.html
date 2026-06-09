@@ -53,12 +53,13 @@
 
     .app {
       display: grid;
-      grid-template-columns: 360px 1fr;
+      grid-template-columns: 360px minmax(320px, 1fr);
       min-height: 100svh;
+      overflow-x: auto;
     }
 
     .app.sidebar-collapsed {
-      grid-template-columns: 56px 1fr;
+      grid-template-columns: 56px minmax(320px, 1fr);
     }
 
     .sidebar {
@@ -696,11 +697,11 @@
 
     @media (max-width: 920px) {
       .app {
-        grid-template-columns: minmax(260px, 34vw) 1fr;
+        grid-template-columns: 300px minmax(320px, 1fr);
       }
 
       .app.sidebar-collapsed {
-        grid-template-columns: 56px 1fr;
+        grid-template-columns: 56px minmax(320px, 1fr);
       }
 
       .sidebar {
@@ -735,11 +736,11 @@
 
     @media (max-width: 520px) {
       .app {
-        grid-template-columns: minmax(220px, 72vw) 1fr;
+        grid-template-columns: 260px minmax(320px, 1fr);
       }
 
       .app.sidebar-collapsed {
-        grid-template-columns: 56px 1fr;
+        grid-template-columns: 56px minmax(320px, 1fr);
       }
 
       .toolbar {
@@ -873,6 +874,7 @@
 
       <script>
     const STORAGE_KEY = "study-note-hud-v1";
+    const SIDEBAR_COLLAPSED_KEY = "study-note-sidebar-collapsed";
     const MAX_IMAGES = 4;
     const URL_RESOLVE_DELAY = 450;
     const GOOGLE_CLIENT_ID = "993349074276-15jbv2cked8q3uo8ln4rcnoep6gvlb5s.apps.googleusercontent.com";
@@ -1528,6 +1530,13 @@
       els.editOnly.forEach(el => el.classList.remove("hidden"));
     }
 
+    function setSidebarCollapsed(collapsed) {
+      els.app.classList.toggle("sidebar-collapsed", collapsed);
+      els.sidebarToggle.textContent = collapsed ? ">" : "<";
+      els.sidebarToggle.setAttribute("aria-label", collapsed ? "Show notes" : "Hide notes");
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? "1" : "0");
+    }
+
     function updateGoogleStatus(text) {
       els.googleStatus.textContent = text;
     }
@@ -1767,9 +1776,7 @@
       if (event.target === els.confirmModal) closeConfirm(false);
     });
     els.sidebarToggle.addEventListener("click", () => {
-      const collapsed = els.app.classList.toggle("sidebar-collapsed");
-      els.sidebarToggle.textContent = collapsed ? ">" : "<";
-      els.sidebarToggle.setAttribute("aria-label", collapsed ? "Show notes" : "Hide notes");
+      setSidebarCollapsed(!els.app.classList.contains("sidebar-collapsed"));
     });
     els.lightboxClose.addEventListener("click", closeLightbox);
     els.lightbox.addEventListener("click", event => {
@@ -1802,6 +1809,7 @@
     updateClock();
     setInterval(updateClock, 1000);
     resizeTextareas();
+    setSidebarCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
     initGoogleAuth();
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("study-note-sw.js").catch(() => {});
