@@ -846,8 +846,6 @@
           <span>NOTES: <span id="noteCount">0</span></span>
           <span class="google-actions">
             <button type="button" id="googleAuthBtn">GOOGLE LOGIN</button>
-            <button type="button" id="googleSaveBtn" disabled>GOOGLE SAVE</button>
-            <button type="button" id="googleLoadBtn" disabled>GOOGLE LOAD</button>
             <span id="googleStatus">GOOGLE: NOT CONFIGURED</span>
           </span>
         </div>
@@ -906,8 +904,6 @@
       lightboxImage: document.getElementById("lightboxImage"),
       lightboxClose: document.getElementById("lightboxClose"),
       googleAuthBtn: document.getElementById("googleAuthBtn"),
-      googleSaveBtn: document.getElementById("googleSaveBtn"),
-      googleLoadBtn: document.getElementById("googleLoadBtn"),
       googleStatus: document.getElementById("googleStatus"),
       confirmModal: document.getElementById("confirmModal"),
       confirmMessage: document.getElementById("confirmMessage"),
@@ -924,6 +920,8 @@
     let googleTokenClient = null;
     let googleAccessToken = "";
     let pendingGoogleSave = false;
+    let googleSyncTimer = 0;
+    let googleSyncInFlight = false;
     let confirmResolver = null;
     let cleanNotesJson = JSON.stringify(notes);
 
@@ -1088,6 +1086,7 @@
       activeId = notes[0]?.id ?? null;
       dirty = false;
       persistNotes();
+      scheduleGoogleSync();
 
       if (!activeId) createNote();
       else {
@@ -1104,6 +1103,7 @@
       if (activeId === noteId) activeId = notes[0]?.id ?? null;
       dirty = false;
       persistNotes();
+      scheduleGoogleSync();
 
       if (!activeId) createNote();
       else render();
@@ -1113,6 +1113,7 @@
       dirty = true;
       updateSaveStatus();
       renderImageStage(getActiveNote());
+      scheduleGoogleSync();
     }
 
     function updateSaveStatus() {
@@ -1431,6 +1432,7 @@
 
       updatePreview();
       renderNoteList();
+      scheduleGoogleSync();
     }
 
     function fileToDataUrl(file) {
@@ -1456,6 +1458,7 @@
       updatePreview();
       renderNoteList();
       els.imageStatus.textContent = `${urls.length}枚の画像をアップロードしました`;
+      scheduleGoogleSync();
     }
 
     function getSharedPayload() {
@@ -1493,6 +1496,7 @@
       dirty = true;
       persistNotes();
       render();
+      scheduleGoogleSync();
 
       if (payload.url) {
         els.imageUrl.value = payload.url;
@@ -1532,8 +1536,6 @@
       if (!GOOGLE_CLIENT_ID) {
         updateGoogleStatus("GOOGLE: CLIENT ID REQUIRED");
         els.googleAuthBtn.disabled = true;
-        els.googleSaveBtn.disabled = true;
-        els.googleLoadBtn.disabled = true;
         return;
       }
 
@@ -1549,8 +1551,6 @@
         callback: tokenResponse => {
           if (tokenResponse?.access_token) {
             googleAccessToken = tokenResponse.access_token;
-            els.googleSaveBtn.disabled = false;
-            els.googleLoadBtn.disabled = false;
             updateGoogleStatus("GOOGLE: SIGNED IN");
             if (pendingGoogleSave) {
               pendingGoogleSave = false;
@@ -1670,14 +1670,48 @@
         return;
       }
 
+      if (googleSyncInFlight) {
+        pendingGoogleSave = true;
+        return;
+      }
+
       try {
+        googleSyncInFlight = true;
+        const current = readForm();
+        if (current) {
+          current.updatedAt = nowISO();
+          notes = notes.map(note => note.id === current.id ? current : note);
+          dirty = false;
+          persistNotes();
+          updateSaveStatus();
+          renderNoteList();
+          els.updatedAt.textContent = `Updated: ${formatDate(current.updatedAt)}`;
+        }
         updateGoogleStatus("GOOGLE: SYNCING");
         const existing = await findGoogleNotesFile();
         const response = await uploadGoogleNotesFile(existing?.id ?? "");
         updateGoogleStatus(response.ok ? "GOOGLE: SYNCED" : "GOOGLE: SYNC FAILED");
       } catch {
         updateGoogleStatus("GOOGLE: SYNC FAILED");
+      } finally {
+        googleSyncInFlight = false;
+        if (pendingGoogleSave && googleAccessToken) {
+          pendingGoogleSave = false;
+          scheduleGoogleSync();
+        }
       }
+    }
+
+    function scheduleGoogleSync() {
+      clearTimeout(googleSyncTimer);
+      if (!googleAccessToken) {
+        pendingGoogleSave = true;
+        updateGoogleStatus("GOOGLE: LOGIN REQUIRED");
+        return;
+      }
+
+      updateGoogleStatus("GOOGLE: WAITING");
+      googleSyncTimer = setTimeout(syncToGoogleDrive, 1200);
     }
 
     async function saveToGoogleDrive() {
@@ -1742,8 +1776,6 @@
       if (event.target === els.lightbox) closeLightbox();
     });
     els.googleAuthBtn.addEventListener("click", requestGoogleLogin);
-    els.googleSaveBtn.addEventListener("click", saveToGoogleDrive);
-    els.googleLoadBtn.addEventListener("click", loadFromGoogleDrive);
 
     document.addEventListener("keydown", event => {
       if (event.key === "Escape" && !els.lightbox.classList.contains("hidden")) {
