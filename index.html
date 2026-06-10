@@ -1764,15 +1764,10 @@
       return true;
     }
 
-    function handleGoogleAuthProblem(nextAction = "save") {
-      pendingGoogleLoad = nextAction === "load";
-      pendingGoogleSave = nextAction !== "load";
-      if (requestGoogleConsentOnce()) return true;
-
-      googleAccessToken = "";
-      setGoogleSignedIn(false);
-      updateGoogleStatus("GOOGLE: LOGIN NEEDED");
-      return true;
+    function markGoogleSyncFailed() {
+      pendingGoogleLoad = false;
+      pendingGoogleSave = false;
+      updateGoogleStatus("GOOGLE: SYNC FAILED");
     }
 
     function initGoogleAuth() {
@@ -1798,9 +1793,9 @@
           if (tokenResponse?.access_token) {
             if (!hasRequiredGoogleScopes(tokenResponse.scope)) {
               if (requestGoogleConsentOnce()) return;
-              googleAccessToken = "";
-              setGoogleSignedIn(false);
-              updateGoogleStatus("GOOGLE: CONSENT NEEDED");
+              googleAccessToken = tokenResponse.access_token;
+              setGoogleSignedIn(true);
+              markGoogleSyncFailed();
               return;
             }
             googleConsentRetried = false;
@@ -1818,15 +1813,23 @@
             }
           } else {
             googleConsentRetried = false;
-            setGoogleSignedIn(false);
-            updateGoogleStatus("GOOGLE: LOGIN NEEDED");
+            if (googleAccessToken) {
+              markGoogleSyncFailed();
+            } else {
+              setGoogleSignedIn(false);
+              updateGoogleStatus("GOOGLE: LOGIN NEEDED");
+            }
           }
         },
         error_callback: () => {
           googleAuthInFlight = false;
           googleConsentRetried = false;
-          setGoogleSignedIn(false);
-          updateGoogleStatus("GOOGLE: LOGIN NEEDED");
+          if (googleAccessToken) {
+            markGoogleSyncFailed();
+          } else {
+            setGoogleSignedIn(false);
+            updateGoogleStatus("GOOGLE: LOGIN NEEDED");
+          }
         }
       });
 
@@ -1970,7 +1973,7 @@
           updateGoogleStatus("GOOGLE: SYNCING");
           const response = await uploadGoogleNotesFile("");
           if (response.status === 401 || response.status === 403) {
-            handleGoogleAuthProblem("load");
+            markGoogleSyncFailed();
             return;
           }
           if (!response.ok) throw new Error("drive create failed: " + response.status);
@@ -2012,7 +2015,7 @@
           updateGoogleStatus("GOOGLE: SYNCING");
           const response = await uploadGoogleNotesFile(shouldMigrateToAppData ? "" : existing.id);
           if (response.status === 401 || response.status === 403) {
-            handleGoogleAuthProblem("load");
+            markGoogleSyncFailed();
             return;
           }
           if (!response.ok) throw new Error("drive merge upload failed: " + response.status);
@@ -2022,13 +2025,8 @@
 
         updateGoogleStatus("GOOGLE: LOADED");
       } catch (error) {
-        if (error?.message?.includes("401") || error?.message?.includes("403")) {
-          handleGoogleAuthProblem("load");
-          return;
-        }
-
         console.warn("Google Drive load skipped", error);
-        updateGoogleStatus("GOOGLE: CHECK SKIPPED");
+        markGoogleSyncFailed();
       }
     }
 
@@ -2083,19 +2081,14 @@
 
         const response = await uploadGoogleNotesFile(uploadFileId);
         if (response.status === 401 || response.status === 403) {
-          handleGoogleAuthProblem("save");
+          markGoogleSyncFailed();
         } else {
           if (response.ok) clearDraftCookie();
-          updateGoogleStatus(response.ok ? "GOOGLE: SYNCED" : "GOOGLE: SYNC PAUSED");
+          updateGoogleStatus(response.ok ? "GOOGLE: SYNCED" : "GOOGLE: SYNC FAILED");
         }
       } catch (error) {
-        if (error?.message?.includes("401") || error?.message?.includes("403")) {
-          handleGoogleAuthProblem("save");
-          return;
-        }
-
         console.warn("Google Drive sync failed", error);
-        updateGoogleStatus("GOOGLE: SYNC PAUSED");
+        markGoogleSyncFailed();
       } finally {
         googleSyncInFlight = false;
         if (pendingGoogleSave && googleAccessToken) {
