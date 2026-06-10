@@ -1002,6 +1002,8 @@
     let googleTokenClient = null;
     let googleAccessToken = "";
     let googleSignedIn = false;
+    let googleConsentRetried = false;
+    let pendingGoogleLoad = false;
     let pendingGoogleSave = false;
     let googleSyncTimer = 0;
     let googleSyncInFlight = false;
@@ -1744,7 +1746,31 @@
 
     function setGoogleSignedIn(signedIn) {
       googleSignedIn = signedIn;
-      updateGoogleButton(signedIn ? "GOOGLE ACCOUNT: SIGNED IN" : "GOOGLE LOGIN", signedIn);
+      updateGoogleButton(signedIn ? "GOOGLE: SIGNED IN" : "GOOGLE LOGIN", signedIn);
+    }
+
+    function hasRequiredGoogleScopes(scopeText = "") {
+      const scopes = new Set(String(scopeText).split(/\s+/).filter(Boolean));
+      return GOOGLE_DRIVE_SCOPE.split(/\s+/).every(scope => scopes.has(scope));
+    }
+
+    function requestGoogleConsentOnce() {
+      if (googleConsentRetried) return false;
+      googleConsentRetried = true;
+      updateGoogleStatus("GOOGLE: CONSENT NEEDED");
+      requestGoogleLogin(true);
+      return true;
+    }
+
+    function handleGoogleAuthProblem(nextAction = "save") {
+      pendingGoogleLoad = nextAction === "load";
+      pendingGoogleSave = nextAction !== "load";
+      if (requestGoogleConsentOnce()) return true;
+
+      googleAccessToken = "";
+      setGoogleSignedIn(false);
+      updateGoogleStatus("GOOGLE: LOGIN NEEDED");
+      return true;
     }
 
     function initGoogleAuth() {
@@ -1767,10 +1793,15 @@
         include_granted_scopes: true,
         callback: tokenResponse => {
           if (tokenResponse?.access_token) {
+            if (!hasRequiredGoogleScopes(tokenResponse.scope) && requestGoogleConsentOnce()) return;
+            googleConsentRetried = false;
             googleAccessToken = tokenResponse.access_token;
             setGoogleSignedIn(true);
             updateGoogleStatus("GOOGLE: CONNECTED");
-            if (pendingGoogleSave) {
+            if (pendingGoogleLoad) {
+              pendingGoogleLoad = false;
+              loadFromGoogleDrive();
+            } else if (pendingGoogleSave) {
               pendingGoogleSave = false;
               syncToGoogleDrive();
             } else {
@@ -1814,8 +1845,12 @@
     }
 
     async function findGoogleNotesFile() {
-      return await findGoogleNotesFileInSpace("appDataFolder")
-        ?? await findGoogleNotesFileInSpace("drive");
+      const files = [
+        await findGoogleNotesFileInSpace("appDataFolder"),
+        await findGoogleNotesFileInSpace("drive")
+      ].filter(Boolean);
+
+      return files.sort((a, b) => new Date(b.modifiedTime) - new Date(a.modifiedTime))[0] ?? null;
     }
 
     async function uploadGoogleNotesFile(fileId = "") {
@@ -1866,10 +1901,24 @@
       return JSON.stringify(normalizeNotes(value));
     }
 
+    function isMeaningfulNote(note) {
+      return Boolean(
+        note?.imageUrl ||
+        note?.resolvedImageUrl ||
+        (note?.images ?? []).length ||
+        note?.firstImpression ||
+        note?.composition ||
+        note?.color ||
+        note?.other
+      );
+    }
+
     function mergeNotesByUpdatedAt(localNotes, remoteNotes) {
       const merged = new Map();
+      const remoteIds = new Set(normalizeNotes(remoteNotes).map(note => note.id));
+      const safeLocalNotes = normalizeNotes(localNotes).filter(note => remoteIds.has(note.id) || isMeaningfulNote(note));
 
-      [...normalizeNotes(remoteNotes), ...normalizeNotes(localNotes)].forEach(note => {
+      [...normalizeNotes(remoteNotes), ...safeLocalNotes].forEach(note => {
         const existing = merged.get(note.id);
         if (!existing || new Date(note.updatedAt) > new Date(existing.updatedAt)) {
           merged.set(note.id, note);
@@ -1881,6 +1930,7 @@
 
     async function loadFromGoogleDrive() {
       if (!googleAccessToken) {
+        pendingGoogleLoad = true;
         setGoogleSignedIn(false);
         updateGoogleStatus("GOOGLE: LOGIN NEEDED");
         requestGoogleLogin();
@@ -1894,10 +1944,7 @@
           updateGoogleStatus("GOOGLE: SYNCING");
           const response = await uploadGoogleNotesFile("");
           if (response.status === 401 || response.status === 403) {
-            googleAccessToken = "";
-            pendingGoogleSave = true;
-            setGoogleSignedIn(false);
-            updateGoogleStatus("GOOGLE: LOGIN NEEDED");
+            handleGoogleAuthProblem("load");
             return;
           }
           if (!response.ok) throw new Error("drive create failed: " + response.status);
@@ -1939,10 +1986,7 @@
           updateGoogleStatus("GOOGLE: SYNCING");
           const response = await uploadGoogleNotesFile(shouldMigrateToAppData ? "" : existing.id);
           if (response.status === 401 || response.status === 403) {
-            googleAccessToken = "";
-            pendingGoogleSave = true;
-            setGoogleSignedIn(false);
-            updateGoogleStatus("GOOGLE: LOGIN NEEDED");
+            handleGoogleAuthProblem("load");
             return;
           }
           if (!response.ok) throw new Error("drive merge upload failed: " + response.status);
@@ -1953,9 +1997,7 @@
         updateGoogleStatus("GOOGLE: LOADED");
       } catch (error) {
         if (error?.message?.includes("401") || error?.message?.includes("403")) {
-          googleAccessToken = "";
-          setGoogleSignedIn(false);
-          updateGoogleStatus("GOOGLE: LOGIN NEEDED");
+          handleGoogleAuthProblem("load");
           return;
         }
 
@@ -1994,10 +2036,7 @@
         const existing = await findGoogleNotesFile();
         const response = await uploadGoogleNotesFile(existing?.space === "appDataFolder" ? existing.id : "");
         if (response.status === 401 || response.status === 403) {
-          googleAccessToken = "";
-          pendingGoogleSave = true;
-          setGoogleSignedIn(false);
-          updateGoogleStatus("GOOGLE: LOGIN NEEDED");
+          handleGoogleAuthProblem("save");
         } else {
           if (response.ok) clearDraftCookie();
           updateGoogleStatus(response.ok ? "GOOGLE: SYNCED" : "GOOGLE: SYNC PAUSED");
