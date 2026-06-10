@@ -1757,12 +1757,63 @@
       updateGoogleStatus("GOOGLE: SYNC FAILED");
     }
 
+    function getGoogleErrorMessage(error) {
+      return String(
+        error?.error?.message ||
+        error?.message ||
+        error?.type ||
+        error?.error ||
+        error ||
+        "unknown error"
+      );
+    }
+
+    function markGoogleSyncFailedWithReason(reason, error = null) {
+      pendingGoogleLoad = false;
+      pendingGoogleSave = false;
+      const message = getGoogleErrorMessage(error || reason).toLowerCase();
+      let status = "GOOGLE: SYNC FAILED";
+
+      if (message.includes("origin") || message.includes("referer")) status = "GOOGLE: ORIGIN BLOCKED";
+      if (message.includes("access not configured") || message.includes("api has not been used")) status = "GOOGLE: DRIVE API OFF";
+      if (message.includes("insufficient") || message.includes("permission") || message.includes("forbidden")) status = "GOOGLE: PERMISSION DENIED";
+      if (message.includes("invalid_token") || message.includes("unauthorized") || message.includes("401")) status = "GOOGLE: AUTH FAILED";
+
+      console.warn("Google sync failed:", reason, error);
+      updateGoogleStatus(status);
+      els.googleStatus.title = `${reason}: ${getGoogleErrorMessage(error)}`;
+    }
+
+    async function parseGoogleError(response, action) {
+      let detail = "";
+      try {
+        const text = await response.text();
+        if (text) {
+          try {
+            detail = JSON.parse(text)?.error?.message || text;
+          } catch {
+            detail = text;
+          }
+        }
+      } catch {
+        detail = "";
+      }
+
+      return new Error(`${action} failed: ${response.status}${detail ? " - " + detail : ""}`);
+    }
+
     function initGoogleAuth() {
       if (!GOOGLE_CLIENT_ID) {
         updateGoogleStatus("GOOGLE: CLIENT ID REQUIRED");
         els.googleAuthBtn.disabled = true;
         setGoogleSignedIn(false);
         return;
+      }
+
+      const isFileOrigin = location.protocol === "file:";
+      if (isFileOrigin) {
+        updateGoogleStatus("GOOGLE: ORIGIN BLOCKED");
+        els.googleStatus.title = "Googleログイン/Drive同期は file:// では失敗しやすいため、http://localhost などのローカルサーバーから開いてください。";
       }
 
       if (!window.google?.accounts?.oauth2) {
@@ -1792,17 +1843,19 @@
             }
           } else {
             if (googleAccessToken) {
-              markGoogleSyncFailed();
+              markGoogleSyncFailedWithReason("token response", tokenResponse);
             } else {
               updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECT NEEDED" : "GOOGLE: LOGIN NEEDED");
             }
           }
         },
-        error_callback: () => {
+        error_callback: error => {
           googleAuthInFlight = false;
           if (googleAccessToken) {
-            markGoogleSyncFailed();
+            markGoogleSyncFailedWithReason("login callback", error);
           } else {
+            console.warn("Google login failed:", error);
+            els.googleStatus.title = `Google login failed: ${getGoogleErrorMessage(error)}`;
             updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECT NEEDED" : "GOOGLE: LOGIN NEEDED");
           }
         }
@@ -1810,7 +1863,7 @@
 
       els.googleAuthBtn.disabled = false;
       setGoogleSignedIn(googleSignedIn);
-      updateGoogleStatus(googleSignedIn ? "GOOGLE: READY" : "GOOGLE: READY");
+      updateGoogleStatus(isFileOrigin ? "GOOGLE: ORIGIN BLOCKED" : "GOOGLE: READY");
     }
 
     function requestGoogleLogin(forceConsent = false) {
@@ -1839,7 +1892,7 @@
         }
       });
 
-      if (!response.ok) throw new Error("drive list failed: " + response.status);
+      if (!response.ok) throw await parseGoogleError(response, `drive list ${space}`);
       const data = await response.json();
       const file = data.files?.[0] ?? null;
       return file ? { ...file, space } : null;
@@ -1847,14 +1900,22 @@
 
     async function findGoogleNotesFile() {
       const files = [];
+      const errors = [];
+      let successfulLookups = 0;
 
       for (const space of ["appDataFolder", "drive"]) {
         try {
           const file = await findGoogleNotesFileInSpace(space);
+          successfulLookups += 1;
           if (file) files.push(file);
         } catch (error) {
+          errors.push(error);
           console.warn(`Google Drive ${space} lookup failed`, error);
         }
+      }
+
+      if (successfulLookups === 0 && errors.length) {
+        throw errors[0];
       }
 
       return files.sort((a, b) => new Date(b.modifiedTime) - new Date(a.modifiedTime))[0] ?? null;
@@ -1900,7 +1961,7 @@
         }
       });
 
-      if (!response.ok) throw new Error("drive download failed: " + response.status);
+      if (!response.ok) throw await parseGoogleError(response, "drive download");
       return response.json();
     }
 
@@ -1953,10 +2014,10 @@
             response = await uploadGoogleNotesFile("", false);
           }
           if (response.status === 401 || response.status === 403) {
-            markGoogleSyncFailed();
+            markGoogleSyncFailedWithReason("drive create", await parseGoogleError(response, "drive create"));
             return;
           }
-          if (!response.ok) throw new Error("drive create failed: " + response.status);
+          if (!response.ok) throw await parseGoogleError(response, "drive create");
           updateGoogleStatus("GOOGLE: SYNCED");
           return;
         }
@@ -1998,18 +2059,17 @@
             response = await uploadGoogleNotesFile("", false);
           }
           if (response.status === 401 || response.status === 403) {
-            markGoogleSyncFailed();
+            markGoogleSyncFailedWithReason("drive merge upload", await parseGoogleError(response, "drive merge upload"));
             return;
           }
-          if (!response.ok) throw new Error("drive merge upload failed: " + response.status);
+          if (!response.ok) throw await parseGoogleError(response, "drive merge upload");
           updateGoogleStatus("GOOGLE: SYNCED");
           return;
         }
 
         updateGoogleStatus("GOOGLE: LOADED");
       } catch (error) {
-        console.warn("Google Drive load skipped", error);
-        markGoogleSyncFailed();
+        markGoogleSyncFailedWithReason("drive load", error);
       }
     }
 
@@ -2066,14 +2126,17 @@
           response = await uploadGoogleNotesFile("", false);
         }
         if (response.status === 401 || response.status === 403) {
-          markGoogleSyncFailed();
+          markGoogleSyncFailedWithReason("drive sync upload", await parseGoogleError(response, "drive sync upload"));
         } else {
           if (response.ok) clearDraftCookie();
-          updateGoogleStatus(response.ok ? "GOOGLE: SYNCED" : "GOOGLE: SYNC FAILED");
+          if (response.ok) {
+            updateGoogleStatus("GOOGLE: SYNCED");
+          } else {
+            markGoogleSyncFailedWithReason("drive sync upload", await parseGoogleError(response, "drive sync upload"));
+          }
         }
       } catch (error) {
-        console.warn("Google Drive sync failed", error);
-        markGoogleSyncFailed();
+        markGoogleSyncFailedWithReason("drive sync", error);
       } finally {
         googleSyncInFlight = false;
         if (pendingGoogleSave && googleAccessToken) {
@@ -2087,7 +2150,7 @@
       clearTimeout(googleSyncTimer);
       if (!googleAccessToken) {
         pendingGoogleSave = true;
-        updateGoogleStatus("GOOGLE: LOGIN NEEDED");
+        updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECT NEEDED" : "GOOGLE: LOGIN NEEDED");
         return;
       }
 
