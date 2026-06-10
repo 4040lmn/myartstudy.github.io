@@ -951,6 +951,7 @@
     const SIDEBAR_COLLAPSED_KEY = "study-note-sidebar-collapsed";
     const DRAFT_COOKIE_KEY = "myartstudy-draft";
     const DRAFT_COOKIE_MAX = 3600;
+    const GOOGLE_CONNECTED_KEY = "myartstudy-google-connected";
     const MAX_IMAGES = 4;
     const URL_RESOLVE_DELAY = 450;
     const GOOGLE_CLIENT_ID = "974365192376-5sam85v0lus50gphvgun5kvddlbei3u6.apps.googleusercontent.com";
@@ -1001,8 +1002,7 @@
     let imageResolveTimer = 0;
     let googleTokenClient = null;
     let googleAccessToken = "";
-    let googleSignedIn = false;
-    let googleConsentRetried = false;
+    let googleSignedIn = localStorage.getItem(GOOGLE_CONNECTED_KEY) === "1";
     let googleAuthInFlight = false;
     let pendingGoogleLoad = false;
     let pendingGoogleSave = false;
@@ -1747,21 +1747,8 @@
 
     function setGoogleSignedIn(signedIn) {
       googleSignedIn = signedIn;
+      localStorage.setItem(GOOGLE_CONNECTED_KEY, signedIn ? "1" : "0");
       updateGoogleButton(signedIn ? "GOOGLE: SIGNED IN" : "GOOGLE LOGIN", signedIn);
-    }
-
-    function hasRequiredGoogleScopes(scopeText = "") {
-      const scopes = new Set(String(scopeText).split(/\s+/).filter(Boolean));
-      return GOOGLE_DRIVE_SCOPE.split(/\s+/).every(scope => scopes.has(scope));
-    }
-
-    function requestGoogleConsentOnce() {
-      if (googleConsentRetried) return false;
-      if (googleAuthInFlight) return true;
-      googleConsentRetried = true;
-      updateGoogleStatus("GOOGLE: CONSENT NEEDED");
-      requestGoogleLogin(true);
-      return true;
     }
 
     function markGoogleSyncFailed() {
@@ -1791,14 +1778,6 @@
         callback: tokenResponse => {
           googleAuthInFlight = false;
           if (tokenResponse?.access_token) {
-            if (!hasRequiredGoogleScopes(tokenResponse.scope)) {
-              if (requestGoogleConsentOnce()) return;
-              googleAccessToken = tokenResponse.access_token;
-              setGoogleSignedIn(true);
-              markGoogleSyncFailed();
-              return;
-            }
-            googleConsentRetried = false;
             googleAccessToken = tokenResponse.access_token;
             setGoogleSignedIn(true);
             updateGoogleStatus("GOOGLE: CONNECTED");
@@ -1812,32 +1791,26 @@
               loadFromGoogleDrive();
             }
           } else {
-            googleConsentRetried = false;
             if (googleAccessToken) {
               markGoogleSyncFailed();
             } else {
-              setGoogleSignedIn(false);
-              updateGoogleStatus("GOOGLE: LOGIN NEEDED");
+              updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECT NEEDED" : "GOOGLE: LOGIN NEEDED");
             }
           }
         },
         error_callback: () => {
           googleAuthInFlight = false;
-          googleConsentRetried = false;
           if (googleAccessToken) {
             markGoogleSyncFailed();
           } else {
-            setGoogleSignedIn(false);
-            updateGoogleStatus("GOOGLE: LOGIN NEEDED");
+            updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECT NEEDED" : "GOOGLE: LOGIN NEEDED");
           }
         }
       });
 
       els.googleAuthBtn.disabled = false;
-      if (!googleSignedIn) {
-        setGoogleSignedIn(false);
-        updateGoogleStatus("GOOGLE: READY");
-      }
+      setGoogleSignedIn(googleSignedIn);
+      updateGoogleStatus(googleSignedIn ? "GOOGLE: READY" : "GOOGLE: READY");
     }
 
     function requestGoogleLogin(forceConsent = false) {
@@ -1850,12 +1823,11 @@
 
       googleAuthInFlight = true;
       try {
-        googleTokenClient.requestAccessToken({ prompt: forceConsent ? "consent" : "" });
+        googleTokenClient.requestAccessToken({ prompt: forceConsent ? "consent" : "select_account" });
       } catch (error) {
         googleAuthInFlight = false;
-        googleConsentRetried = false;
         console.warn("Google login request failed", error);
-        updateGoogleStatus("GOOGLE: LOGIN NEEDED");
+        updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECT NEEDED" : "GOOGLE: LOGIN NEEDED");
       }
     }
 
@@ -1874,19 +1846,25 @@
     }
 
     async function findGoogleNotesFile() {
-      const files = [
-        await findGoogleNotesFileInSpace("appDataFolder"),
-        await findGoogleNotesFileInSpace("drive")
-      ].filter(Boolean);
+      const files = [];
+
+      for (const space of ["appDataFolder", "drive"]) {
+        try {
+          const file = await findGoogleNotesFileInSpace(space);
+          if (file) files.push(file);
+        } catch (error) {
+          console.warn(`Google Drive ${space} lookup failed`, error);
+        }
+      }
 
       return files.sort((a, b) => new Date(b.modifiedTime) - new Date(a.modifiedTime))[0] ?? null;
     }
 
-    async function uploadGoogleNotesFile(fileId = "") {
+    async function uploadGoogleNotesFile(fileId = "", useAppDataFolder = true) {
       const metadata = {
         name: GOOGLE_NOTES_FILE,
         mimeType: "application/json",
-        ...(fileId ? {} : { parents: ["appDataFolder"] })
+        ...(fileId || !useAppDataFolder ? {} : { parents: ["appDataFolder"] })
       };
       const boundary = "study-notes-boundary-" + Date.now();
       const body = [
@@ -1960,8 +1938,7 @@
     async function loadFromGoogleDrive() {
       if (!googleAccessToken) {
         pendingGoogleLoad = true;
-        setGoogleSignedIn(false);
-        updateGoogleStatus("GOOGLE: LOGIN NEEDED");
+        updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECTING" : "GOOGLE: LOGIN NEEDED");
         requestGoogleLogin();
         return;
       }
@@ -1971,7 +1948,10 @@
         const existing = await findGoogleNotesFile();
         if (!existing) {
           updateGoogleStatus("GOOGLE: SYNCING");
-          const response = await uploadGoogleNotesFile("");
+          let response = await uploadGoogleNotesFile("");
+          if ((response.status === 401 || response.status === 403) && googleSignedIn) {
+            response = await uploadGoogleNotesFile("", false);
+          }
           if (response.status === 401 || response.status === 403) {
             markGoogleSyncFailed();
             return;
@@ -2013,7 +1993,10 @@
 
         if (mergedJson !== remoteJson || shouldMigrateToAppData) {
           updateGoogleStatus("GOOGLE: SYNCING");
-          const response = await uploadGoogleNotesFile(shouldMigrateToAppData ? "" : existing.id);
+          let response = await uploadGoogleNotesFile(shouldMigrateToAppData ? "" : existing.id);
+          if ((response.status === 401 || response.status === 403) && shouldMigrateToAppData) {
+            response = await uploadGoogleNotesFile("", false);
+          }
           if (response.status === 401 || response.status === 403) {
             markGoogleSyncFailed();
             return;
@@ -2033,8 +2016,7 @@
     async function syncToGoogleDrive() {
       if (!googleAccessToken) {
         pendingGoogleSave = true;
-        setGoogleSignedIn(false);
-        updateGoogleStatus("GOOGLE: LOGIN NEEDED");
+        updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECTING" : "GOOGLE: LOGIN NEEDED");
         requestGoogleLogin();
         return;
       }
@@ -2079,7 +2061,10 @@
           }
         }
 
-        const response = await uploadGoogleNotesFile(uploadFileId);
+        let response = await uploadGoogleNotesFile(uploadFileId);
+        if ((response.status === 401 || response.status === 403) && !uploadFileId) {
+          response = await uploadGoogleNotesFile("", false);
+        }
         if (response.status === 401 || response.status === 403) {
           markGoogleSyncFailed();
         } else {
