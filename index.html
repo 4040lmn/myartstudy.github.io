@@ -25,8 +25,8 @@
       --focus: #ffffff;
       --shadow: 0 0 0 1px #252525, 0 20px 60px rgba(0, 0, 0, .45);
       --radius: 8px;
-      --rail: clamp(38px, 5.4vw, 56px);
-      --rail-button: clamp(24px, 3.5vw, 32px);
+      --rail: clamp(44px, 5.8vw, 62px);
+      --rail-button: clamp(32px, 4.2vw, 40px);
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -117,6 +117,7 @@
       display: grid;
       place-items: center;
       font-weight: 900;
+      font-size: 18px;
       box-shadow: var(--shadow);
       transition: none;
     }
@@ -948,10 +949,13 @@
     const STORAGE_KEY = "myartstudy-notes-v1";
     const LEGACY_STORAGE_KEY = "study-note-hud-v1";
     const SIDEBAR_COLLAPSED_KEY = "study-note-sidebar-collapsed";
+    const DRAFT_COOKIE_KEY = "myartstudy-draft";
+    const DRAFT_COOKIE_MAX = 3600;
     const MAX_IMAGES = 4;
     const URL_RESOLVE_DELAY = 450;
     const GOOGLE_CLIENT_ID = "974365192376-5sam85v0lus50gphvgun5kvddlbei3u6.apps.googleusercontent.com";
-    const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+    const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata";
+    const GOOGLE_NOTES_FILE = "study-notes.json";
 
     const els = {
       app: document.getElementById("app"),
@@ -1069,6 +1073,89 @@
       cleanNotesJson = JSON.stringify(notes);
     }
 
+    function readCookie(name) {
+      return document.cookie
+        .split("; ")
+        .find(row => row.startsWith(name + "="))
+        ?.slice(name.length + 1) ?? "";
+    }
+
+    function writeCookie(name, value, maxAge = 604800) {
+      document.cookie = `${name}=${value}; Max-Age=${maxAge}; Path=/; SameSite=Lax`;
+    }
+
+    function clearDraftCookie() {
+      writeCookie(DRAFT_COOKIE_KEY, "", 0);
+    }
+
+    function compactDraft(draft) {
+      return Object.fromEntries(Object.entries(draft).filter(([, value]) => value !== ""));
+    }
+
+    function encodeDraftCookie(draft) {
+      const compact = compactDraft(draft);
+      const textKeys = ["f", "m", "c", "o", "u"];
+      let value = encodeURIComponent(JSON.stringify(compact));
+
+      while (value.length > DRAFT_COOKIE_MAX) {
+        const key = textKeys.reduce((longest, current) =>
+          String(compact[current] ?? "").length > String(compact[longest] ?? "").length ? current : longest
+        , textKeys[0]);
+
+        if (!compact[key]) break;
+        compact[key] = String(compact[key]).slice(0, Math.max(0, Math.floor(String(compact[key]).length * .85)));
+        value = encodeURIComponent(JSON.stringify(compactDraft(compact)));
+      }
+
+      return value.length <= DRAFT_COOKIE_MAX ? value : "";
+    }
+
+    function saveDraftCookie() {
+      const note = getActiveNote();
+      if (!note) return;
+
+      const draft = {
+        i: note.id,
+        t: Date.now(),
+        u: els.imageUrl.value.trim(),
+        f: els.firstImpression.value,
+        m: els.composition.value,
+        c: els.color.value,
+        o: els.other.value
+      };
+      const encoded = encodeDraftCookie(draft);
+      if (encoded) writeCookie(DRAFT_COOKIE_KEY, encoded);
+    }
+
+    function restoreDraftCookie() {
+      try {
+        const raw = readCookie(DRAFT_COOKIE_KEY);
+        if (!raw) return false;
+
+        const draft = JSON.parse(decodeURIComponent(raw));
+        const note = getActiveNote();
+        if (!note || draft.i !== note.id) return false;
+
+        const noteUpdated = new Date(note.updatedAt).getTime();
+        if (Number(draft.t ?? 0) <= noteUpdated) return false;
+
+        note.imageUrl = draft.u ?? note.imageUrl;
+        note.firstImpression = draft.f ?? note.firstImpression;
+        note.composition = draft.m ?? note.composition;
+        note.color = draft.c ?? note.color;
+        note.other = draft.o ?? note.other;
+        dirty = true;
+        writeForm(note);
+        renderImageStage(note);
+        renderNoteList();
+        updateSaveStatus();
+        return true;
+      } catch {
+        clearDraftCookie();
+        return false;
+      }
+    }
+
     function restoreCleanNotes() {
       try {
         notes = normalizeNotes(JSON.parse(cleanNotesJson));
@@ -1167,6 +1254,7 @@
       activeId = updated.id;
       dirty = false;
       persistNotes();
+      clearDraftCookie();
       switchMode();
       render();
       await syncToGoogleDrive();
@@ -1180,6 +1268,7 @@
       activeId = notes[0]?.id ?? null;
       dirty = false;
       persistNotes();
+      clearDraftCookie();
       scheduleGoogleSync();
 
       if (!activeId) createNote();
@@ -1197,6 +1286,7 @@
       if (activeId === noteId) activeId = notes[0]?.id ?? null;
       dirty = false;
       persistNotes();
+      clearDraftCookie();
       scheduleGoogleSync();
 
       if (!activeId) createNote();
@@ -1205,6 +1295,7 @@
 
     function markDirty() {
       dirty = true;
+      saveDraftCookie();
       updateSaveStatus();
       renderImageStage(getActiveNote());
       scheduleGoogleSync();
@@ -1708,9 +1799,9 @@
       googleTokenClient.requestAccessToken({ prompt: forceConsent ? "consent" : "" });
     }
 
-    async function findGoogleNotesFile() {
-      const query = encodeURIComponent("name = 'study-notes.json' and trashed = false");
-      const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}&spaces=drive&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`, {
+    async function findGoogleNotesFileInSpace(space) {
+      const query = encodeURIComponent(`name = '${GOOGLE_NOTES_FILE}' and trashed = false`);
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}&spaces=${space}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`, {
         headers: {
           Authorization: "Bearer " + googleAccessToken
         }
@@ -1718,13 +1809,20 @@
 
       if (!response.ok) throw new Error("drive list failed: " + response.status);
       const data = await response.json();
-      return data.files?.[0] ?? null;
+      const file = data.files?.[0] ?? null;
+      return file ? { ...file, space } : null;
+    }
+
+    async function findGoogleNotesFile() {
+      return await findGoogleNotesFileInSpace("appDataFolder")
+        ?? await findGoogleNotesFileInSpace("drive");
     }
 
     async function uploadGoogleNotesFile(fileId = "") {
       const metadata = {
-        name: "study-notes.json",
-        mimeType: "application/json"
+        name: GOOGLE_NOTES_FILE,
+        mimeType: "application/json",
+        ...(fileId ? {} : { parents: ["appDataFolder"] })
       };
       const boundary = "study-notes-boundary-" + Date.now();
       const body = [
@@ -1819,8 +1917,9 @@
         const localJson = serializeComparableNotes(normalizedLocalNotes);
         const remoteJson = serializeComparableNotes(normalizedRemoteNotes);
         const mergedJson = serializeComparableNotes(mergedNotes);
+        const shouldMigrateToAppData = existing.space !== "appDataFolder";
 
-        if (mergedJson === localJson && mergedJson === remoteJson) {
+        if (mergedJson === localJson && mergedJson === remoteJson && !shouldMigrateToAppData) {
           dirty = false;
           cleanNotesJson = JSON.stringify(normalizedLocalNotes);
           updateSaveStatus();
@@ -1836,9 +1935,9 @@
           render();
         }
 
-        if (mergedJson !== remoteJson) {
+        if (mergedJson !== remoteJson || shouldMigrateToAppData) {
           updateGoogleStatus("GOOGLE: SYNCING");
-          const response = await uploadGoogleNotesFile(existing.id);
+          const response = await uploadGoogleNotesFile(shouldMigrateToAppData ? "" : existing.id);
           if (response.status === 401 || response.status === 403) {
             googleAccessToken = "";
             pendingGoogleSave = true;
@@ -1893,13 +1992,14 @@
         }
         updateGoogleStatus("GOOGLE: SYNCING");
         const existing = await findGoogleNotesFile();
-        const response = await uploadGoogleNotesFile(existing?.id ?? "");
+        const response = await uploadGoogleNotesFile(existing?.space === "appDataFolder" ? existing.id : "");
         if (response.status === 401 || response.status === 403) {
           googleAccessToken = "";
           pendingGoogleSave = true;
           setGoogleSignedIn(false);
           updateGoogleStatus("GOOGLE: LOGIN NEEDED");
         } else {
+          if (response.ok) clearDraftCookie();
           updateGoogleStatus(response.ok ? "GOOGLE: SYNCED" : "GOOGLE: SYNC PAUSED");
         }
       } catch (error) {
@@ -2047,6 +2147,7 @@
     if (!handleIncomingShare()) {
       if (notes.length === 0) createNote();
       else render();
+      restoreDraftCookie();
     }
   </script>
 </body>
