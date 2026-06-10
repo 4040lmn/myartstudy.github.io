@@ -1003,6 +1003,7 @@
     let googleAccessToken = "";
     let googleSignedIn = false;
     let googleConsentRetried = false;
+    let googleAuthInFlight = false;
     let pendingGoogleLoad = false;
     let pendingGoogleSave = false;
     let googleSyncTimer = 0;
@@ -1756,6 +1757,7 @@
 
     function requestGoogleConsentOnce() {
       if (googleConsentRetried) return false;
+      if (googleAuthInFlight) return true;
       googleConsentRetried = true;
       updateGoogleStatus("GOOGLE: CONSENT NEEDED");
       requestGoogleLogin(true);
@@ -1792,8 +1794,15 @@
         scope: GOOGLE_DRIVE_SCOPE,
         include_granted_scopes: true,
         callback: tokenResponse => {
+          googleAuthInFlight = false;
           if (tokenResponse?.access_token) {
-            if (!hasRequiredGoogleScopes(tokenResponse.scope) && requestGoogleConsentOnce()) return;
+            if (!hasRequiredGoogleScopes(tokenResponse.scope)) {
+              if (requestGoogleConsentOnce()) return;
+              googleAccessToken = "";
+              setGoogleSignedIn(false);
+              updateGoogleStatus("GOOGLE: CONSENT NEEDED");
+              return;
+            }
             googleConsentRetried = false;
             googleAccessToken = tokenResponse.access_token;
             setGoogleSignedIn(true);
@@ -1808,9 +1817,16 @@
               loadFromGoogleDrive();
             }
           } else {
+            googleConsentRetried = false;
             setGoogleSignedIn(false);
             updateGoogleStatus("GOOGLE: LOGIN NEEDED");
           }
+        },
+        error_callback: () => {
+          googleAuthInFlight = false;
+          googleConsentRetried = false;
+          setGoogleSignedIn(false);
+          updateGoogleStatus("GOOGLE: LOGIN NEEDED");
         }
       });
 
@@ -1827,7 +1843,17 @@
         return;
       }
 
-      googleTokenClient.requestAccessToken({ prompt: forceConsent ? "consent" : "" });
+      if (googleAuthInFlight) return;
+
+      googleAuthInFlight = true;
+      try {
+        googleTokenClient.requestAccessToken({ prompt: forceConsent ? "consent" : "" });
+      } catch (error) {
+        googleAuthInFlight = false;
+        googleConsentRetried = false;
+        console.warn("Google login request failed", error);
+        updateGoogleStatus("GOOGLE: LOGIN NEEDED");
+      }
     }
 
     async function findGoogleNotesFileInSpace(space) {
@@ -2034,7 +2060,28 @@
         }
         updateGoogleStatus("GOOGLE: SYNCING");
         const existing = await findGoogleNotesFile();
-        const response = await uploadGoogleNotesFile(existing?.space === "appDataFolder" ? existing.id : "");
+        let uploadFileId = existing?.space === "appDataFolder" ? existing.id : "";
+
+        if (existing) {
+          const remoteNotes = await downloadGoogleNotesFile(existing.id);
+          if (Array.isArray(remoteNotes)) {
+            const normalizedLocalNotes = normalizeNotes(notes);
+            const normalizedRemoteNotes = normalizeNotes(remoteNotes);
+            const mergedNotes = mergeNotesByUpdatedAt(normalizedLocalNotes, normalizedRemoteNotes);
+            const localJson = serializeComparableNotes(normalizedLocalNotes);
+            const mergedJson = serializeComparableNotes(mergedNotes);
+
+            if (mergedJson !== localJson) {
+              notes = mergedNotes;
+              activeId = notes.some(note => note.id === activeId) ? activeId : notes[0]?.id ?? null;
+              dirty = false;
+              persistNotes();
+              render();
+            }
+          }
+        }
+
+        const response = await uploadGoogleNotesFile(uploadFileId);
         if (response.status === 401 || response.status === 403) {
           handleGoogleAuthProblem("save");
         } else {
@@ -2042,6 +2089,11 @@
           updateGoogleStatus(response.ok ? "GOOGLE: SYNCED" : "GOOGLE: SYNC PAUSED");
         }
       } catch (error) {
+        if (error?.message?.includes("401") || error?.message?.includes("403")) {
+          handleGoogleAuthProblem("save");
+          return;
+        }
+
         console.warn("Google Drive sync failed", error);
         updateGoogleStatus("GOOGLE: SYNC PAUSED");
       } finally {
