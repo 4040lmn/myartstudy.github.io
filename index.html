@@ -1002,8 +1002,10 @@
     let imageResolveTimer = 0;
     let googleTokenClient = null;
     let googleAccessToken = "";
+    let googleTokenExpiresAt = 0;
     let googleSignedIn = localStorage.getItem(GOOGLE_CONNECTED_KEY) === "1";
     let googleAuthInFlight = false;
+    let googleAutoReconnectTried = false;
     let pendingGoogleLoad = false;
     let pendingGoogleSave = false;
     let googleSyncTimer = 0;
@@ -1768,6 +1770,30 @@
       updateGoogleButton(signedIn ? "GOOGLE: SIGNED IN" : "GOOGLE LOGIN", signedIn);
     }
 
+    function hasFreshGoogleToken() {
+      return Boolean(googleAccessToken && Date.now() < googleTokenExpiresAt - 60000);
+    }
+
+    function queueGoogleAuth(reason = "save", interactive = false) {
+      if (reason === "load") pendingGoogleLoad = true;
+      else pendingGoogleSave = true;
+
+      if (googleAuthInFlight) {
+        updateGoogleStatus("GOOGLE: RECONNECTING");
+        return true;
+      }
+
+      if (!interactive && googleSignedIn && googleAutoReconnectTried) {
+        updateGoogleStatus("GOOGLE: RECONNECT NEEDED");
+        return false;
+      }
+
+      if (!interactive && googleSignedIn) googleAutoReconnectTried = true;
+      updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECTING" : "GOOGLE: LOGIN NEEDED");
+      requestGoogleLogin(false, interactive || !googleSignedIn);
+      return true;
+    }
+
     function markGoogleSyncFailed() {
       pendingGoogleLoad = false;
       pendingGoogleSave = false;
@@ -1795,6 +1821,12 @@
       if (message.includes("access not configured") || message.includes("api has not been used")) status = "GOOGLE: DRIVE API OFF";
       if (message.includes("insufficient") || message.includes("permission") || message.includes("forbidden")) status = "GOOGLE: PERMISSION DENIED";
       if (message.includes("invalid_token") || message.includes("unauthorized") || message.includes("401")) status = "GOOGLE: AUTH FAILED";
+
+      if (status === "GOOGLE: AUTH FAILED") {
+        googleAccessToken = "";
+        googleTokenExpiresAt = 0;
+        googleAutoReconnectTried = true;
+      }
 
       console.warn("Google sync failed:", reason, error);
       updateGoogleStatus(status);
@@ -1847,6 +1879,8 @@
           googleAuthInFlight = false;
           if (tokenResponse?.access_token) {
             googleAccessToken = tokenResponse.access_token;
+            googleTokenExpiresAt = Date.now() + Number(tokenResponse.expires_in ?? 3300) * 1000;
+            googleAutoReconnectTried = false;
             setGoogleSignedIn(true);
             updateGoogleStatus("GOOGLE: CONNECTED");
             if (pendingGoogleLoad) {
@@ -1890,6 +1924,7 @@
       }
 
       if (googleAuthInFlight) return;
+      if (interactive) googleAutoReconnectTried = false;
 
       googleAuthInFlight = true;
       try {
@@ -2014,10 +2049,8 @@
     }
 
     async function loadFromGoogleDrive() {
-      if (!googleAccessToken) {
-        pendingGoogleLoad = true;
-        updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECTING" : "GOOGLE: LOGIN NEEDED");
-        requestGoogleLogin(false, !googleSignedIn);
+      if (!hasFreshGoogleToken()) {
+        queueGoogleAuth("load", false);
         return;
       }
 
@@ -2091,10 +2124,8 @@
     }
 
     async function syncToGoogleDrive() {
-      if (!googleAccessToken) {
-        pendingGoogleSave = true;
-        updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECTING" : "GOOGLE: LOGIN NEEDED");
-        requestGoogleLogin(false, !googleSignedIn);
+      if (!hasFreshGoogleToken()) {
+        queueGoogleAuth("save", false);
         return;
       }
 
@@ -2165,7 +2196,7 @@
 
     function scheduleGoogleSync() {
       clearTimeout(googleSyncTimer);
-      if (!googleAccessToken) {
+      if (!hasFreshGoogleToken()) {
         pendingGoogleSave = true;
         updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECT NEEDED" : "GOOGLE: LOGIN NEEDED");
         return;
@@ -2258,8 +2289,8 @@
       if (event.target === els.lightbox) closeLightbox();
     });
     els.googleAuthBtn.addEventListener("click", () => {
-      if (googleAccessToken) syncToGoogleDrive();
-      else requestGoogleLogin(false);
+      if (hasFreshGoogleToken()) syncToGoogleDrive();
+      else queueGoogleAuth("load", true);
     });
 
     document.addEventListener("keydown", event => {
@@ -2280,7 +2311,7 @@
 
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState !== "hidden") return;
-      if (persistCurrentFormForReload() && googleAccessToken) scheduleGoogleSync();
+      if (persistCurrentFormForReload() && hasFreshGoogleToken()) scheduleGoogleSync();
     });
 
     window.addEventListener("pagehide", () => {
