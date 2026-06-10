@@ -1263,6 +1263,23 @@
       await syncToGoogleDrive();
     }
 
+    function persistCurrentFormForReload() {
+      if (!dirty) return false;
+
+      const updated = readForm();
+      if (!updated) return false;
+
+      updated.updatedAt = nowISO();
+      notes = notes.map(note => note.id === updated.id ? updated : note);
+      notes.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      activeId = updated.id;
+      dirty = false;
+      persistNotes();
+      saveDraftCookie();
+      updateSaveStatus();
+      return true;
+    }
+
     async function deleteNote() {
       if (!activeId) return;
       if (!await askConfirm("このノートを削除しますか？", "削除")) return;
@@ -1866,7 +1883,7 @@
       updateGoogleStatus(isFileOrigin ? "GOOGLE: ORIGIN BLOCKED" : "GOOGLE: READY");
     }
 
-    function requestGoogleLogin(forceConsent = false) {
+    function requestGoogleLogin(forceConsent = false, interactive = true) {
       if (!googleTokenClient) {
         initGoogleAuth();
         return;
@@ -1876,7 +1893,7 @@
 
       googleAuthInFlight = true;
       try {
-        googleTokenClient.requestAccessToken({ prompt: forceConsent ? "consent" : "select_account" });
+        googleTokenClient.requestAccessToken({ prompt: forceConsent ? "consent" : interactive ? "select_account" : "" });
       } catch (error) {
         googleAuthInFlight = false;
         console.warn("Google login request failed", error);
@@ -2000,7 +2017,7 @@
       if (!googleAccessToken) {
         pendingGoogleLoad = true;
         updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECTING" : "GOOGLE: LOGIN NEEDED");
-        requestGoogleLogin();
+        requestGoogleLogin(false, !googleSignedIn);
         return;
       }
 
@@ -2077,7 +2094,7 @@
       if (!googleAccessToken) {
         pendingGoogleSave = true;
         updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECTING" : "GOOGLE: LOGIN NEEDED");
-        requestGoogleLogin();
+        requestGoogleLogin(false, !googleSignedIn);
         return;
       }
 
@@ -2261,10 +2278,17 @@
       }
     });
 
-    window.addEventListener("beforeunload", event => {
-      if (!dirty) return;
-      event.preventDefault();
-      event.returnValue = "";
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "hidden") return;
+      if (persistCurrentFormForReload() && googleAccessToken) scheduleGoogleSync();
+    });
+
+    window.addEventListener("pagehide", () => {
+      persistCurrentFormForReload();
+    });
+
+    window.addEventListener("beforeunload", () => {
+      persistCurrentFormForReload();
     });
 
     updateClock();
@@ -2279,7 +2303,9 @@
     if (!handleIncomingShare()) {
       if (notes.length === 0) createNote();
       else render();
-      restoreDraftCookie();
+      const restoredDraft = restoreDraftCookie();
+      if (restoredDraft) persistCurrentFormForReload();
+      if (googleSignedIn) setTimeout(loadFromGoogleDrive, 800);
     }
   </script>
 </body>
