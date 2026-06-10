@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://api.fxtwitter.com https://api.microlink.io https://www.googleapis.com https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com; upgrade-insecure-requests" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://api.fxtwitter.com https://api.microlink.io https://www.googleapis.com https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com; upgrade-insecure-requests" />
   <title>MyArtStudy</title>
   <link rel="manifest" href="study-note-manifest.webmanifest" />
   <link rel="icon" href="myartstudy-icon.svg" type="image/svg+xml" />
@@ -24,7 +24,7 @@
       --ok: #cfcfcf;
       --focus: #ffffff;
       --shadow: 0 0 0 1px #252525, 0 20px 60px rgba(0, 0, 0, .45);
-      --radius: 16px;
+      --radius: 8px;
       --rail: clamp(38px, 5.4vw, 56px);
       --rail-button: clamp(24px, 3.5vw, 32px);
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
@@ -38,14 +38,11 @@
     body {
       margin: 0;
       min-height: 100svh;
-      background:
-        linear-gradient(135deg, rgba(255,255,255,.035) 1px, transparent 1px) 0 0 / 28px 28px,
-        radial-gradient(circle at 80% 10%, #161616 0, transparent 28%),
-        var(--bg);
+      background: #090909;
       color: var(--text);
       font-family: var(--sans);
       font-size: 80%;
-      letter-spacing: .02em;
+      letter-spacing: 0;
     }
 
     button,
@@ -114,7 +111,7 @@
       border: 1px solid var(--line);
       color: var(--text);
       background: #111;
-      border-radius: 12px;
+      border-radius: 8px;
       width: var(--rail-button);
       height: var(--rail-button);
       display: grid;
@@ -126,7 +123,6 @@
 
     .brand,
     .toolbar,
-    .search,
     .note-list {
       display: none !important;
       width: 0 !important;
@@ -140,7 +136,6 @@
 
     .app:not(.sidebar-collapsed) .brand,
     .app:not(.sidebar-collapsed) .toolbar,
-    .app:not(.sidebar-collapsed) .search,
     .app:not(.sidebar-collapsed) .note-list {
       display: flex !important;
       width: auto !important;
@@ -159,7 +154,6 @@
 
     .app.sidebar-collapsed .brand,
     .app.sidebar-collapsed .toolbar,
-    .app.sidebar-collapsed .search,
     .app.sidebar-collapsed .note-list {
       display: none !important;
       width: 0 !important;
@@ -173,7 +167,7 @@
       border: 1px solid var(--line);
       border-radius: var(--radius);
       padding: 16px;
-      background: linear-gradient(180deg, #141414, #0d0d0d);
+      background: #101010;
       box-shadow: var(--shadow);
     }
 
@@ -231,7 +225,7 @@
       border: 1px solid var(--line);
       color: var(--text);
       background: #111;
-      border-radius: 12px;
+      border-radius: 8px;
       padding: 11px 12px;
       font-weight: 700;
       font-size: 13px;
@@ -278,17 +272,6 @@
       border-color: rgba(255, 77, 77, .45);
     }
 
-    .search {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: #0c0c0c;
-      color: var(--text);
-      padding: 12px 13px;
-      outline: none;
-    }
-
-    .search:focus,
     input:focus,
     textarea:focus {
       border-color: var(--focus);
@@ -304,7 +287,7 @@
 
     .app:not(.sidebar-collapsed) .note-list {
       border: 1px solid var(--line);
-      border-radius: 14px;
+      border-radius: 8px;
       background: rgba(8, 8, 8, .84);
       padding: 10px;
       box-shadow: var(--shadow);
@@ -313,7 +296,7 @@
     .note-card {
       border: 1px solid var(--line-soft);
       background: #0e0e0e;
-      border-radius: 14px;
+      border-radius: 8px;
       padding: 13px;
       display: grid;
       grid-template-columns: 59px 1fr 26px;
@@ -328,7 +311,7 @@
       width: 59px;
       aspect-ratio: 1;
       border: 1px solid var(--line-soft);
-      border-radius: 10px;
+      border-radius: 6px;
       background: #080808;
       overflow: hidden;
       grid-row: span 3;
@@ -396,7 +379,7 @@
       width: 26px;
       height: 26px;
       border: 1px solid rgba(255, 77, 77, .4);
-      border-radius: 10px;
+      border-radius: 8px;
       background: #111;
       display: grid;
       place-items: center;
@@ -462,22 +445,6 @@
       flex: 0 0 auto;
     }
 
-    .tab {
-      border: 1px solid var(--line);
-      background: #0d0d0d;
-      color: var(--muted);
-      border-radius: 999px;
-      padding: 9px 13px;
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .tab.active {
-      color: #050505;
-      background: #f1f1f1;
-      border-color: #fff;
-    }
-
     .document {
       flex: 1;
       border: 1px solid var(--line);
@@ -488,8 +455,7 @@
       min-height: 0;
     }
 
-    .editor,
-    .preview {
+    .editor {
       padding: 20px;
       display: grid;
       gap: 16px;
@@ -515,7 +481,7 @@
     textarea {
       width: 100%;
       border: 1px solid var(--line);
-      border-radius: 13px;
+      border-radius: 8px;
       background: #080808;
       color: var(--text);
       padding: 13px 14px;
@@ -537,7 +503,7 @@
 
     .image-stage {
       border: 1px dashed #444;
-      border-radius: 15px;
+      border-radius: 8px;
       padding: 12px;
       background: #090909;
       min-height: 220px;
@@ -583,7 +549,7 @@
 
     .upload-btn {
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: 8px;
       background: #111;
       color: var(--text);
       min-height: 48px;
@@ -623,7 +589,7 @@
     .image-item {
       position: relative;
       border: 1px solid var(--line);
-      border-radius: 10px;
+      border-radius: 8px;
       background: #111;
       overflow: hidden;
     }
@@ -660,59 +626,10 @@
     .image-stage img {
       max-width: 100%;
       max-height: 520px;
-      border-radius: 10px;
+      border-radius: 8px;
       display: block;
       border: 1px solid var(--line);
       background: #111;
-    }
-
-    .preview-head {
-      display: grid;
-      gap: 8px;
-      border-bottom: 1px solid var(--line);
-      padding-bottom: 16px;
-    }
-
-    .preview-title {
-      margin: 0;
-      font-size: clamp(26px, 5vw, 56px);
-      line-height: 1.1;
-      letter-spacing: .05em;
-    }
-
-    .preview-time {
-      font-family: var(--mono);
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .analysis-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-    }
-
-    .analysis-card {
-      border: 1px solid var(--line);
-      border-radius: 15px;
-      padding: 15px;
-      background: #0b0b0b;
-      min-height: 160px;
-    }
-
-    .analysis-card h3 {
-      margin: 0 0 10px;
-      font-family: var(--mono);
-      font-size: 13px;
-      color: #fff;
-      letter-spacing: .08em;
-    }
-
-    .analysis-card p {
-      margin: 0;
-      color: #d6d6d6;
-      line-height: 1.8;
-      white-space: pre-wrap;
     }
 
     .empty {
@@ -802,7 +719,7 @@
       max-height: 92svh;
       object-fit: contain;
       border: 1px solid var(--line);
-      border-radius: 10px;
+      border-radius: 8px;
       background: #080808;
     }
 
@@ -833,7 +750,7 @@
     .confirm-panel {
       width: min(360px, 100%);
       border: 1px solid var(--line);
-      border-radius: 14px;
+      border-radius: 8px;
       background: #101010;
       box-shadow: var(--shadow);
       padding: 18px;
@@ -876,13 +793,8 @@
       }
 
       .topbar,
-      .grid-2,
-      .analysis-grid {
+      .grid-2 {
         grid-template-columns: 1fr;
-      }
-
-      .tab {
-        flex: 1;
       }
     }
 
@@ -908,8 +820,7 @@
         grid-template-columns: 1fr;
       }
 
-      .editor,
-      .preview {
+      .editor {
         padding: 14px;
       }
     }
@@ -1032,10 +943,10 @@
   </div>
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://apis.google.com/js/api.js" async defer></script>
 
-      <script>
-    const STORAGE_KEY = "study-note-hud-v1";
+  <script>
+    const STORAGE_KEY = "myartstudy-notes-v1";
+    const LEGACY_STORAGE_KEY = "study-note-hud-v1";
     const SIDEBAR_COLLAPSED_KEY = "study-note-sidebar-collapsed";
     const MAX_IMAGES = 4;
     const URL_RESOLVE_DELAY = 450;
@@ -1082,11 +993,11 @@
     let notes = normalizeNotes(loadNotes());
     let activeId = notes[0]?.id ?? null;
     let dirty = false;
-    let mode = "edit";
     let imageResolveToken = 0;
     let imageResolveTimer = 0;
     let googleTokenClient = null;
     let googleAccessToken = "";
+    let googleSignedIn = false;
     let pendingGoogleSave = false;
     let googleSyncTimer = 0;
     let googleSyncInFlight = false;
@@ -1121,7 +1032,11 @@
 
     function loadNotes() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        let raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+          if (raw) localStorage.setItem(STORAGE_KEY, raw);
+        }
         return raw ? JSON.parse(raw) : [];
       } catch {
         return [];
@@ -1191,7 +1106,7 @@
       activeId = note.id;
       dirty = false;
       persistNotes();
-      switchMode("edit");
+      switchMode();
       render();
     }
 
@@ -1252,7 +1167,7 @@
       activeId = updated.id;
       dirty = false;
       persistNotes();
-      switchMode("edit");
+      switchMode();
       render();
       await syncToGoogleDrive();
     }
@@ -1269,7 +1184,7 @@
 
       if (!activeId) createNote();
       else {
-        switchMode("edit");
+        switchMode();
         render();
       }
     }
@@ -1332,6 +1247,17 @@
       return /^data:image\//i.test(url) || /\.(avif|bmp|gif|jpe?g|png|svg|webp)(\?.*)?$/i.test(url);
     }
 
+    function isAllowedImageSourceInput(url) {
+      if (/^data:image\//i.test(url)) return true;
+
+      try {
+        const parsed = new URL(url);
+        return parsed.protocol === "https:" || parsed.protocol === "http:";
+      } catch {
+        return false;
+      }
+    }
+
     function uniqueUrls(urls) {
       return Array.from(new Set(urls.filter(Boolean))).slice(0, MAX_IMAGES);
     }
@@ -1373,6 +1299,7 @@
 
     async function resolveImageUrls(url) {
       if (!url) return [];
+      if (!isAllowedImageSourceInput(url)) return [];
       if (isLikelyImageUrl(url)) return [url];
 
       if (getTwitterStatusId(url)) {
@@ -1510,7 +1437,7 @@
 
           activeId = note.id;
           dirty = false;
-          switchMode("edit");
+          switchMode();
           render();
         };
 
@@ -1562,7 +1489,7 @@
 
     function renderImageStage(note) {
       const urls = getDisplayImageUrls(note);
-      renderImages(els.imageStage, urls, "Image preview");
+      renderImages(els.imageStage, urls, "Image area");
       els.imageStatus.textContent = urls.length ? `${urls.length} / ${MAX_IMAGES} images` : "";
     }
 
@@ -1580,7 +1507,7 @@
       if (!url) {
         setActiveImages("", []);
         renderImageStage(getActiveNote());
-        updatePreview();
+        refreshImageStage();
         renderNoteList();
         return;
       }
@@ -1611,7 +1538,7 @@
           : "Image could not be loaded.";
       }
 
-      updatePreview();
+      refreshImageStage();
       renderNoteList();
       scheduleGoogleSync();
     }
@@ -1637,7 +1564,7 @@
       els.imageUrl.value = "";
       switchImageSource("upload");
       renderImageStage(getActiveNote());
-      updatePreview();
+      refreshImageStage();
       renderNoteList();
       els.imageStatus.textContent = `${urls.length}枚の画像をアップロードしました`;
       scheduleGoogleSync();
@@ -1696,17 +1623,11 @@
       return true;
     }
 
-    function fillText(el, value) {
-      el.textContent = value || "No entry";
-      el.classList.toggle("empty", !value);
-    }
-
-    function updatePreview() {
+    function refreshImageStage() {
       renderImageStage(getActiveNote());
     }
 
     function switchMode() {
-      mode = "edit";
       els.editor.classList.remove("hidden");
       els.editOnly.forEach(el => el.classList.remove("hidden"));
     }
@@ -1730,11 +1651,16 @@
       els.googleAuthBtn.title = signedIn ? label : "GOOGLE LOGIN";
     }
 
+    function setGoogleSignedIn(signedIn) {
+      googleSignedIn = signedIn;
+      updateGoogleButton(signedIn ? "GOOGLE ACCOUNT: SIGNED IN" : "GOOGLE LOGIN", signedIn);
+    }
+
     function initGoogleAuth() {
       if (!GOOGLE_CLIENT_ID) {
         updateGoogleStatus("GOOGLE: CLIENT ID REQUIRED");
         els.googleAuthBtn.disabled = true;
-        updateGoogleButton("GOOGLE LOGIN", false);
+        setGoogleSignedIn(false);
         return;
       }
 
@@ -1751,8 +1677,8 @@
         callback: tokenResponse => {
           if (tokenResponse?.access_token) {
             googleAccessToken = tokenResponse.access_token;
-            updateGoogleStatus("GOOGLE: SIGNED IN");
-            updateGoogleButton("GOOGLE ACCOUNT: SIGNED IN", true);
+            setGoogleSignedIn(true);
+            updateGoogleStatus("GOOGLE: CONNECTED");
             if (pendingGoogleSave) {
               pendingGoogleSave = false;
               syncToGoogleDrive();
@@ -1760,15 +1686,17 @@
               loadFromGoogleDrive();
             }
           } else {
-            updateGoogleStatus("GOOGLE: LOGIN FAILED");
-            updateGoogleButton("GOOGLE LOGIN", false);
+            setGoogleSignedIn(false);
+            updateGoogleStatus("GOOGLE: LOGIN NEEDED");
           }
         }
       });
 
       els.googleAuthBtn.disabled = false;
-      updateGoogleButton("GOOGLE LOGIN", false);
-      updateGoogleStatus("GOOGLE: READY");
+      if (!googleSignedIn) {
+        setGoogleSignedIn(false);
+        updateGoogleStatus("GOOGLE: READY");
+      }
     }
 
     function requestGoogleLogin(forceConsent = false) {
@@ -1855,7 +1783,8 @@
 
     async function loadFromGoogleDrive() {
       if (!googleAccessToken) {
-        updateGoogleStatus("GOOGLE: LOGIN REQUIRED");
+        setGoogleSignedIn(false);
+        updateGoogleStatus("GOOGLE: LOGIN NEEDED");
         requestGoogleLogin();
         return;
       }
@@ -1869,8 +1798,8 @@
           if (response.status === 401 || response.status === 403) {
             googleAccessToken = "";
             pendingGoogleSave = true;
-            updateGoogleButton("GOOGLE LOGIN", false);
-            updateGoogleStatus("GOOGLE: LOGIN REQUIRED");
+            setGoogleSignedIn(false);
+            updateGoogleStatus("GOOGLE: LOGIN NEEDED");
             return;
           }
           if (!response.ok) throw new Error("drive create failed: " + response.status);
@@ -1913,8 +1842,8 @@
           if (response.status === 401 || response.status === 403) {
             googleAccessToken = "";
             pendingGoogleSave = true;
-            updateGoogleButton("GOOGLE LOGIN", false);
-            updateGoogleStatus("GOOGLE: LOGIN REQUIRED");
+            setGoogleSignedIn(false);
+            updateGoogleStatus("GOOGLE: LOGIN NEEDED");
             return;
           }
           if (!response.ok) throw new Error("drive merge upload failed: " + response.status);
@@ -1926,20 +1855,21 @@
       } catch (error) {
         if (error?.message?.includes("401") || error?.message?.includes("403")) {
           googleAccessToken = "";
-          updateGoogleButton("GOOGLE LOGIN", false);
-          updateGoogleStatus("GOOGLE: LOGIN REQUIRED");
+          setGoogleSignedIn(false);
+          updateGoogleStatus("GOOGLE: LOGIN NEEDED");
           return;
         }
 
         console.warn("Google Drive load skipped", error);
-        updateGoogleStatus("GOOGLE: CHECK FAILED");
+        updateGoogleStatus("GOOGLE: CHECK SKIPPED");
       }
     }
 
     async function syncToGoogleDrive() {
       if (!googleAccessToken) {
         pendingGoogleSave = true;
-        updateGoogleStatus("GOOGLE: LOGIN REQUIRED");
+        setGoogleSignedIn(false);
+        updateGoogleStatus("GOOGLE: LOGIN NEEDED");
         requestGoogleLogin();
         return;
       }
@@ -1967,14 +1897,14 @@
         if (response.status === 401 || response.status === 403) {
           googleAccessToken = "";
           pendingGoogleSave = true;
-          updateGoogleButton("GOOGLE LOGIN", false);
-          updateGoogleStatus("GOOGLE: LOGIN REQUIRED");
+          setGoogleSignedIn(false);
+          updateGoogleStatus("GOOGLE: LOGIN NEEDED");
         } else {
-          updateGoogleStatus(response.ok ? "GOOGLE: SYNCED" : "GOOGLE: SYNC FAILED");
+          updateGoogleStatus(response.ok ? "GOOGLE: SYNCED" : "GOOGLE: SYNC PAUSED");
         }
       } catch (error) {
         console.warn("Google Drive sync failed", error);
-        updateGoogleStatus("GOOGLE: SYNC FAILED");
+        updateGoogleStatus("GOOGLE: SYNC PAUSED");
       } finally {
         googleSyncInFlight = false;
         if (pendingGoogleSave && googleAccessToken) {
@@ -1988,7 +1918,7 @@
       clearTimeout(googleSyncTimer);
       if (!googleAccessToken) {
         pendingGoogleSave = true;
-        updateGoogleStatus("GOOGLE: LOGIN REQUIRED");
+        updateGoogleStatus("GOOGLE: LOGIN NEEDED");
         return;
       }
 
@@ -2020,9 +1950,8 @@
       writeForm(note);
       renderNoteList();
       renderImageStage(note);
-      updatePreview();
       updateSaveStatus();
-      switchMode(mode);
+      switchMode();
       els.updatedAt.textContent = `Updated: ${formatDate(note?.updatedAt)}`;
     }
 
@@ -2079,7 +2008,10 @@
     els.lightbox.addEventListener("click", event => {
       if (event.target === els.lightbox) closeLightbox();
     });
-    els.googleAuthBtn.addEventListener("click", () => requestGoogleLogin(false));
+    els.googleAuthBtn.addEventListener("click", () => {
+      if (googleAccessToken) syncToGoogleDrive();
+      else requestGoogleLogin(false);
+    });
 
     document.addEventListener("keydown", event => {
       if (event.key === "Escape" && !els.lightbox.classList.contains("hidden")) {
