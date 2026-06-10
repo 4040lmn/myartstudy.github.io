@@ -1752,7 +1752,7 @@
           if (tokenResponse?.access_token) {
             googleAccessToken = tokenResponse.access_token;
             updateGoogleStatus("GOOGLE: SIGNED IN");
-            updateGoogleButton("Googleアカウント: ログイン中", true);
+            updateGoogleButton("GOOGLE ACCOUNT: SIGNED IN", true);
             if (pendingGoogleSave) {
               pendingGoogleSave = false;
               syncToGoogleDrive();
@@ -1840,6 +1840,19 @@
       return JSON.stringify(normalizeNotes(value));
     }
 
+    function mergeNotesByUpdatedAt(localNotes, remoteNotes) {
+      const merged = new Map();
+
+      [...normalizeNotes(remoteNotes), ...normalizeNotes(localNotes)].forEach(note => {
+        const existing = merged.get(note.id);
+        if (!existing || new Date(note.updatedAt) > new Date(existing.updatedAt)) {
+          merged.set(note.id, note);
+        }
+      });
+
+      return Array.from(merged.values()).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    }
+
     async function loadFromGoogleDrive() {
       if (!googleAccessToken) {
         updateGoogleStatus("GOOGLE: LOGIN REQUIRED");
@@ -1851,7 +1864,17 @@
         updateGoogleStatus("GOOGLE: LOADING");
         const existing = await findGoogleNotesFile();
         if (!existing) {
-          updateGoogleStatus("GOOGLE: UP TO DATE");
+          updateGoogleStatus("GOOGLE: SYNCING");
+          const response = await uploadGoogleNotesFile("");
+          if (response.status === 401 || response.status === 403) {
+            googleAccessToken = "";
+            pendingGoogleSave = true;
+            updateGoogleButton("GOOGLE LOGIN", false);
+            updateGoogleStatus("GOOGLE: LOGIN REQUIRED");
+            return;
+          }
+          if (!response.ok) throw new Error("drive create failed: " + response.status);
+          updateGoogleStatus("GOOGLE: SYNCED");
           return;
         }
 
@@ -1862,19 +1885,43 @@
         }
 
         const normalizedRemoteNotes = normalizeNotes(remoteNotes);
-        if (serializeComparableNotes(normalizedRemoteNotes) === serializeComparableNotes(notes)) {
+        const normalizedLocalNotes = normalizeNotes(notes);
+        const mergedNotes = mergeNotesByUpdatedAt(normalizedLocalNotes, normalizedRemoteNotes);
+        const localJson = serializeComparableNotes(normalizedLocalNotes);
+        const remoteJson = serializeComparableNotes(normalizedRemoteNotes);
+        const mergedJson = serializeComparableNotes(mergedNotes);
+
+        if (mergedJson === localJson && mergedJson === remoteJson) {
           dirty = false;
-          cleanNotesJson = JSON.stringify(notes);
+          cleanNotesJson = JSON.stringify(normalizedLocalNotes);
           updateSaveStatus();
           updateGoogleStatus("GOOGLE: UP TO DATE");
           return;
         }
 
-        notes = normalizedRemoteNotes;
-        activeId = notes[0]?.id ?? null;
-        dirty = false;
-        persistNotes();
-        render();
+        if (mergedJson !== localJson) {
+          notes = mergedNotes;
+          activeId = notes[0]?.id ?? null;
+          dirty = false;
+          persistNotes();
+          render();
+        }
+
+        if (mergedJson !== remoteJson) {
+          updateGoogleStatus("GOOGLE: SYNCING");
+          const response = await uploadGoogleNotesFile(existing.id);
+          if (response.status === 401 || response.status === 403) {
+            googleAccessToken = "";
+            pendingGoogleSave = true;
+            updateGoogleButton("GOOGLE LOGIN", false);
+            updateGoogleStatus("GOOGLE: LOGIN REQUIRED");
+            return;
+          }
+          if (!response.ok) throw new Error("drive merge upload failed: " + response.status);
+          updateGoogleStatus("GOOGLE: SYNCED");
+          return;
+        }
+
         updateGoogleStatus("GOOGLE: LOADED");
       } catch (error) {
         if (error?.message?.includes("401") || error?.message?.includes("403")) {
@@ -1885,7 +1932,7 @@
         }
 
         console.warn("Google Drive load skipped", error);
-        updateGoogleStatus("GOOGLE: UP TO DATE");
+        updateGoogleStatus("GOOGLE: CHECK FAILED");
       }
     }
 
@@ -1925,7 +1972,8 @@
         } else {
           updateGoogleStatus(response.ok ? "GOOGLE: SYNCED" : "GOOGLE: SYNC FAILED");
         }
-      } catch {
+      } catch (error) {
+        console.warn("Google Drive sync failed", error);
         updateGoogleStatus("GOOGLE: SYNC FAILED");
       } finally {
         googleSyncInFlight = false;
