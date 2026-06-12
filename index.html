@@ -59,7 +59,7 @@
     .app {
       display: grid;
       grid-template-columns: var(--sidebar-open) minmax(320px, 1fr);
-      min-height: 100svh;
+      height: 100svh;
       overflow-x: hidden;
       transition: none;
     }
@@ -74,7 +74,8 @@
       top: 0;
       z-index: 20;
       width: var(--rail);
-      min-height: 100svh;
+      height: 100svh;
+      max-height: 100svh;
       border-right: 1px solid transparent;
       background: transparent;
       backdrop-filter: none;
@@ -83,6 +84,7 @@
       flex-direction: column;
       gap: 14px;
       min-width: 0;
+      min-height: 0;
       align-items: center;
       transition: none;
     }
@@ -282,7 +284,9 @@
       overflow: auto;
       display: flex;
       flex-direction: column;
+      flex: 1 1 auto;
       gap: 10px;
+      min-height: 0;
       padding-right: 3px;
     }
 
@@ -836,11 +840,6 @@
     }
 
     @media (max-width: 920px) {
-      .sidebar,
-      .app.sidebar-collapsed .sidebar {
-        max-height: none;
-      }
-
       .main {
         padding: 14px;
       }
