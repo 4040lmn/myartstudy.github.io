@@ -86,8 +86,13 @@
       min-width: 0;
       min-height: 0;
       overflow: hidden;
+      scrollbar-width: none;
       align-items: center;
       transition: none;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      display: none;
     }
 
     .app:not(.sidebar-collapsed) .sidebar {
@@ -291,6 +296,26 @@
       gap: 10px;
       min-height: 0;
       padding-right: 3px;
+      scrollbar-color: #2a2a2a #080808;
+      scrollbar-width: thin;
+    }
+
+    .note-list::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .note-list::-webkit-scrollbar-track {
+      background: #080808;
+    }
+
+    .note-list::-webkit-scrollbar-thumb {
+      background: #2a2a2a;
+      border: 2px solid #080808;
+      border-radius: 999px;
+    }
+
+    .note-list::-webkit-scrollbar-thumb:hover {
+      background: #3a3a3a;
     }
 
     .app:not(.sidebar-collapsed) .note-list {
@@ -524,9 +549,6 @@
 
     #firstImpressionInput {
       min-height: calc(1em * 1.7 + 26px);
-      overflow-x: auto;
-      overflow-y: hidden;
-      white-space: nowrap;
     }
 
     .grid-2 {
@@ -946,7 +968,7 @@
             <div class="grid-2">
               <div class="field">
                 <label for="firstImpressionInput">第一印象</label>
-                <textarea id="firstImpressionInput" rows="1" wrap="off" placeholder="最初に目に入ったもの、感情、印象の強さなど"></textarea>
+                <textarea id="firstImpressionInput" rows="1" placeholder="最初に目に入ったもの、感情、印象の強さなど"></textarea>
               </div>
 
               <div class="field">
@@ -968,8 +990,8 @@
         </form>
 
         <div class="footer-hud">
-          <span>ローカル保存: 有効</span>
-          <span>ノート: <span id="noteCount">0</span></span>
+          <span>LOCAL STORAGE: ACTIVE</span>
+          <span>NOTES: <span id="noteCount">0</span></span>
           <span class="google-actions">
             <button type="button" id="googleAuthBtn"><span class="google-dot"></span><span class="google-label">GOOGLE LOGIN</span></button>
             <span id="googleStatus">GOOGLE: NOT CONFIGURED</span>
@@ -1071,6 +1093,9 @@
     let googleSyncInFlight = false;
     let confirmResolver = null;
     let cleanNotesJson = JSON.stringify(notes);
+    let sidebarSwipeStartX = 0;
+    let sidebarSwipeStartY = 0;
+    let sidebarSwipeActive = false;
 
     function uid() {
       return "note-" + Date.now().toString(36);
@@ -2317,6 +2342,26 @@
     els.sidebarToggle.addEventListener("click", () => {
       setSidebarCollapsed(!els.app.classList.contains("sidebar-collapsed"));
     });
+    document.addEventListener("touchstart", event => {
+      const touch = event.changedTouches[0];
+      sidebarSwipeStartX = touch.clientX;
+      sidebarSwipeStartY = touch.clientY;
+      sidebarSwipeActive =
+        touch.clientX <= window.innerWidth / 2 &&
+        !event.target.closest("input, textarea, button, .lightbox, .confirm-modal");
+    }, { passive: true });
+    document.addEventListener("touchend", event => {
+      if (!sidebarSwipeActive) return;
+      sidebarSwipeActive = false;
+
+      const touch = event.changedTouches[0];
+      const dx = touch.clientX - sidebarSwipeStartX;
+      const dy = touch.clientY - sidebarSwipeStartY;
+      const isHorizontalSwipe = Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.4;
+      if (!isHorizontalSwipe) return;
+
+      setSidebarCollapsed(dx < 0);
+    }, { passive: true });
     els.lightboxClose.addEventListener("click", closeLightbox);
     els.lightbox.addEventListener("click", event => {
       if (event.target === els.lightbox) closeLightbox();
