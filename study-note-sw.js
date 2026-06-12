@@ -1,7 +1,5 @@
-const CACHE_NAME = "myartstudy-shell-v2";
-const SHELL_ASSETS = [
-  "./",
-  "./index.html",
+const CACHE_NAME = "myartstudy-assets-v3";
+const ASSETS = [
   "./myartstudy-icon.svg",
   "./icon-new-note.svg",
   "./icon-save.svg",
@@ -12,15 +10,17 @@ const SHELL_ASSETS = [
 self.addEventListener("install", event => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL_ASSETS))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
   );
 });
 
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))
-    ).then(() => self.clients.claim())
+      Promise.all(keys.map(key => caches.delete(key)))
+    ).then(() => caches.open(CACHE_NAME))
+      .then(cache => cache.addAll(ASSETS))
+      .then(() => self.clients.claim())
   );
 });
 
@@ -30,27 +30,14 @@ self.addEventListener("fetch", event => {
   const isExternal =
     url.hostname !== self.location.hostname ||
     url.pathname.startsWith("/gsi/");
-
-  if (isExternal) {
-    event.respondWith(fetch(request));
-    return;
-  }
-
-  const isHtmlShell =
+  const isHtml =
     request.mode === "navigate" ||
     url.pathname.endsWith("/") ||
-    url.pathname.endsWith("/index.html");
+    url.pathname.endsWith("/index.html") ||
+    request.headers.get("accept")?.includes("text/html");
 
-  if (isHtmlShell) {
-    event.respondWith(
-      fetch(request).then(response => {
-        if (response.ok && request.method === "GET") {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
-        }
-        return response;
-      }).catch(() => caches.match(request))
-    );
+  if (isExternal || isHtml) {
+    event.respondWith(fetch(request));
     return;
   }
 

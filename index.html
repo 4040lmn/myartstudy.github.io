@@ -2402,7 +2402,9 @@
     setSidebarCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
     initGoogleAuth();
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("study-note-sw.js").catch(() => {});
+      navigator.serviceWorker.register("study-note-sw.js").then(registration => {
+        registration.update().catch(() => {});
+      }).catch(() => {});
     }
 
     if (!handleIncomingShare()) {
