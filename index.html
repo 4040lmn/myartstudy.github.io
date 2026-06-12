@@ -1032,6 +1032,7 @@
     const SIDEBAR_COLLAPSED_KEY = "study-note-sidebar-collapsed";
     const DRAFT_COOKIE_KEY = "myartstudy-draft";
     const DRAFT_COOKIE_MAX = 3600;
+    const APP_VERSION = "20260613-no-sw";
     const GOOGLE_CONNECTED_KEY = "myartstudy-google-connected";
     const MAX_IMAGES = 4;
     const URL_RESOLVE_DELAY = 450;
@@ -1103,6 +1104,24 @@
 
     function nowISO() {
       return new Date().toISOString();
+    }
+
+    async function disableServiceWorkerCache() {
+      try {
+        if ("serviceWorker" in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(registration => registration.unregister()));
+        }
+
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(key => caches.delete(key)));
+        }
+
+        localStorage.setItem("myartstudy-app-version", APP_VERSION);
+      } catch (error) {
+        console.warn("Service worker cleanup skipped", error);
+      }
     }
 
     function formatDate(value) {
@@ -2401,11 +2420,7 @@
     resizeTextareas();
     setSidebarCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
     initGoogleAuth();
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("study-note-sw.js").then(registration => {
-        registration.update().catch(() => {});
-      }).catch(() => {});
-    }
+    disableServiceWorkerCache();
 
     if (!handleIncomingShare()) {
       if (notes.length === 0) createNote();
