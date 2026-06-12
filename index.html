@@ -164,6 +164,11 @@
 
     .app:not(.sidebar-collapsed) .toolbar {
       display: grid !important;
+      width: 35px !important;
+      height: 35px !important;
+      min-height: 35px !important;
+      flex: 0 0 35px;
+      overflow: visible !important;
     }
 
     .app.sidebar-collapsed .brand,
@@ -233,6 +238,8 @@
       display: grid;
       grid-template-columns: 35px;
       gap: 8px;
+      align-items: center;
+      justify-content: start;
     }
 
     .btn {
@@ -326,6 +333,7 @@
       border-radius: 8px;
       background: rgba(8, 8, 8, .84);
       padding: 10px;
+      margin-top: 2px;
       box-shadow: var(--shadow);
       flex: 1 1 auto;
       min-height: 0;
