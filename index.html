@@ -57,7 +57,7 @@
 
     .app {
       display: grid;
-      grid-template-columns: var(--rail) minmax(320px, 1fr);
+      grid-template-columns: minmax(300px, 360px) minmax(320px, 1fr);
       min-height: 100svh;
       overflow-x: hidden;
       transition: none;
@@ -87,14 +87,13 @@
     }
 
     .app:not(.sidebar-collapsed) .sidebar {
-      position: fixed;
-      width: min(360px, calc(100vw - 28px));
-      inset: 0 auto 0 0;
+      position: sticky;
+      width: auto;
       padding: 18px;
       align-items: stretch;
       background: #101010;
       border-right: 1px solid var(--line);
-      box-shadow: 10px 0 24px rgba(0, 0, 0, .28);
+      box-shadow: none;
     }
 
     .app:not(.sidebar-collapsed)::after {
@@ -408,7 +407,7 @@
     .main {
       grid-column: 2;
       min-width: 320px;
-      padding: 24px 24px 24px 4px;
+      padding: 24px;
       display: flex;
       flex-direction: column;
       gap: 16px;
@@ -436,14 +435,6 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-    }
-
-    .mode-tabs {
-      display: flex;
-      gap: 8px;
-      flex-wrap: nowrap;
-      justify-content: flex-end;
-      flex: 0 0 auto;
     }
 
     .document {
@@ -490,10 +481,17 @@
     }
 
     textarea {
-      min-height: 120px;
+      min-height: calc(3em * 1.7 + 26px);
       resize: none;
       overflow: hidden;
       line-height: 1.7;
+    }
+
+    #firstImpressionInput {
+      min-height: calc(1em * 1.7 + 26px);
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: nowrap;
     }
 
     .grid-2 {
@@ -650,6 +648,14 @@
       font-size: 11px;
       background: #080808;
       flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .footer-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-left: auto;
     }
 
     .google-actions {
@@ -779,7 +785,7 @@
       }
 
       .main {
-        padding: 14px 14px 14px 4px;
+        padding: 14px;
       }
 
       .topbar,
@@ -789,8 +795,11 @@
     }
 
     @media (max-width: 520px) {
+      .app {
+        grid-template-columns: minmax(260px, 300px) minmax(320px, 1fr);
+      }
+
       .app:not(.sidebar-collapsed) .sidebar {
-        width: min(300px, calc(100vw - 28px));
         padding: 12px;
       }
 
@@ -838,14 +847,6 @@
         <div>
           <div class="brand-kicker">
             <span id="updatedAt">最終更新: --</span>
-            <div class="mode-tabs">
-              <button class="btn icon-btn edit-only" id="saveBtn" title="保存" aria-label="保存">
-                <img src="icon-save.svg" alt="" />
-              </button>
-              <button class="btn danger icon-btn edit-only" id="deleteBtn" title="削除" aria-label="削除">
-                <img src="icon-delete.svg" alt="" />
-              </button>
-            </div>
           </div>
         </div>
       </header>
@@ -856,7 +857,7 @@
           <div class="image-controls">
             <div class="image-source-tabs" role="tablist" aria-label="画像入力方法">
               <button class="source-tab active" id="urlSourceTab" type="button">URL</button>
-              <button class="source-tab" id="uploadSourceTab" type="button">UPLOAD</button>
+              <button class="source-tab" id="uploadSourceTab" type="button">アップロード</button>
             </div>
             <div class="field image-source-panel active" id="urlSourcePanel">
               <label for="imageUrlInput">URL</label>
@@ -877,32 +878,40 @@
           <div class="grid-2">
             <div class="field">
               <label for="firstImpressionInput">第一印象</label>
-              <textarea id="firstImpressionInput" placeholder="最初に目に入ったもの、感情、印象の強さなど"></textarea>
+              <textarea id="firstImpressionInput" rows="1" wrap="off" placeholder="最初に目に入ったもの、感情、印象の強さなど"></textarea>
             </div>
 
             <div class="field">
               <label for="compositionInput">構図 / レイアウトの分析</label>
-              <textarea id="compositionInput" placeholder="視線誘導、余白、重心、主役と脇役、画面分割など"></textarea>
+              <textarea id="compositionInput" rows="3" placeholder="視線誘導、余白、重心、主役と脇役、画面分割など"></textarea>
             </div>
 
             <div class="field">
               <label for="colorInput">配色 / 明暗の分析</label>
-              <textarea id="colorInput" placeholder="色数、コントラスト、明度差、彩度、光源、見やすさなど"></textarea>
+              <textarea id="colorInput" rows="3" placeholder="色数、コントラスト、明度差、彩度、光源、見やすさなど"></textarea>
             </div>
 
             <div class="field">
               <label for="otherInput">その他</label>
-              <textarea id="otherInput" placeholder="気づいたこと、真似したい点、次に試すことなど"></textarea>
+              <textarea id="otherInput" rows="3" placeholder="気づいたこと、真似したい点、次に試すことなど"></textarea>
             </div>
           </div>
         </form>
 
         <div class="footer-hud">
-          <span>LOCAL STORAGE: ACTIVE</span>
-          <span>NOTES: <span id="noteCount">0</span></span>
+          <span>ローカル保存: 有効</span>
+          <span>ノート: <span id="noteCount">0</span></span>
           <span class="google-actions">
             <button type="button" id="googleAuthBtn"><span class="google-dot"></span><span class="google-label">GOOGLE LOGIN</span></button>
             <span id="googleStatus">GOOGLE: NOT CONFIGURED</span>
+          </span>
+          <span class="footer-actions">
+            <button class="btn icon-btn edit-only" id="saveBtn" title="保存" aria-label="保存">
+              <img src="icon-save.svg" alt="" />
+            </button>
+            <button class="btn danger icon-btn edit-only" id="deleteBtn" title="削除" aria-label="削除">
+              <img src="icon-delete.svg" alt="" />
+            </button>
           </span>
         </div>
       </section>
@@ -1304,7 +1313,7 @@
     }
 
     function updateSaveStatus() {
-      els.saveStatus.textContent = dirty ? "Unsaved" : "Saved";
+      els.saveStatus.textContent = dirty ? "未保存" : "保存済";
       els.saveStatus.classList.toggle("unsaved", dirty);
     }
 
@@ -1582,7 +1591,7 @@
 
     function renderImageStage(note) {
       const urls = getDisplayImageUrls(note);
-      renderImages(els.imageStage, urls, "Image area");
+      renderImages(els.imageStage, urls, "画像エリア");
       els.imageStatus.textContent = urls.length ? `${urls.length} / ${MAX_IMAGES} images` : "";
     }
 
@@ -1605,7 +1614,7 @@
         return;
       }
 
-      els.imageStage.textContent = "Loading images...";
+      els.imageStage.textContent = "画像を読み込み中...";
 
       try {
         const urls = await resolveImageUrls(url);
@@ -1617,7 +1626,7 @@
         if (urls.length === 0) {
           els.imageStage.textContent = getTwitterStatusId(url)
             ? "Twitter/Xの画像を取得できませんでした。画像付き投稿か確認してください。"
-            : "Image could not be found.";
+            : "画像を取得できませんでした。";
         } else if (getTwitterStatusId(url)) {
           els.imageStatus.textContent = `Twitter/Xから${urls.length}枚の画像を取得しました`;
         } else if (!isLikelyImageUrl(url)) {
@@ -1628,7 +1637,7 @@
         setActiveImages(url, []);
         els.imageStage.textContent = getTwitterStatusId(url)
           ? "Twitter/Xの画像を取得できませんでした。"
-          : "Image could not be loaded.";
+          : "画像を読み込めませんでした。";
       }
 
       refreshImageStage();
@@ -1651,7 +1660,7 @@
 
       dirty = true;
       updateSaveStatus();
-      els.imageStatus.textContent = "Loading uploads...";
+      els.imageStatus.textContent = "アップロード画像を読み込み中...";
       const urls = await Promise.all(files.map(fileToDataUrl));
       setActiveImages("", urls, "file");
       els.imageUrl.value = "";
@@ -2124,7 +2133,7 @@
           persistNotes();
           updateSaveStatus();
           renderNoteList();
-          els.updatedAt.textContent = `Updated: ${formatDate(current.updatedAt)}`;
+          els.updatedAt.textContent = `最終更新: ${formatDate(current.updatedAt)}`;
         }
         updateGoogleStatus("GOOGLE: SYNCING");
         const existing = await findGoogleNotesFile();
@@ -2212,7 +2221,7 @@
       renderImageStage(note);
       updateSaveStatus();
       switchMode();
-      els.updatedAt.textContent = `Updated: ${formatDate(note?.updatedAt)}`;
+      els.updatedAt.textContent = `最終更新: ${formatDate(note?.updatedAt)}`;
     }
 
     [els.firstImpression, els.composition, els.color, els.other].forEach(input => {
