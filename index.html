@@ -407,10 +407,12 @@
     .main {
       grid-column: 2;
       min-width: 320px;
+      height: 100svh;
       padding: 24px;
       display: flex;
       flex-direction: column;
       gap: 16px;
+      overflow: hidden;
     }
 
     .topbar {
@@ -445,12 +447,35 @@
       box-shadow: var(--shadow);
       overflow: hidden;
       min-height: 0;
+      display: flex;
+      flex-direction: column;
     }
 
     .editor {
       padding: 20px;
       display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
       gap: 16px;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .image-pane {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: grid;
+      gap: 12px;
+      align-self: start;
+      background: rgba(13, 13, 13, .96);
+      padding-bottom: 4px;
+    }
+
+    .input-pane {
+      min-height: 0;
+      overflow: auto;
+      padding-right: 2px;
     }
 
     .hidden {
@@ -505,7 +530,7 @@
       border-radius: 8px;
       padding: 12px;
       background: #090909;
-      min-height: 220px;
+      min-height: clamp(180px, 32svh, 360px);
       display: grid;
       place-items: center;
       color: var(--dim);
@@ -624,7 +649,7 @@
 
     .image-stage img {
       max-width: 100%;
-      max-height: 520px;
+      max-height: clamp(180px, 42svh, 520px);
       border-radius: 8px;
       display: block;
       border: 1px solid var(--line);
@@ -778,6 +803,37 @@
       gap: 8px;
     }
 
+    @media (min-width: 1100px) and (orientation: landscape) {
+      .editor {
+        grid-template-columns: minmax(320px, .9fr) minmax(420px, 1.1fr);
+        grid-template-rows: minmax(0, 1fr);
+        align-items: stretch;
+      }
+
+      .image-pane {
+        position: sticky;
+        top: 20px;
+        max-height: calc(100svh - 140px);
+        overflow: auto;
+      }
+
+      .input-pane {
+        max-height: calc(100svh - 170px);
+      }
+
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .image-stage {
+        min-height: clamp(260px, 54svh, 620px);
+      }
+
+      .image-stage img {
+        max-height: clamp(260px, 64svh, 720px);
+      }
+    }
+
     @media (max-width: 920px) {
       .sidebar,
       .app.sidebar-collapsed .sidebar {
@@ -854,46 +910,50 @@
       <section class="document">
         <form class="editor" id="editor">
 
-          <div class="image-controls">
-            <div class="image-source-tabs" role="tablist" aria-label="画像入力方法">
-              <button class="source-tab active" id="urlSourceTab" type="button">URL</button>
-              <button class="source-tab" id="uploadSourceTab" type="button">アップロード</button>
+          <div class="image-pane">
+            <div class="image-controls">
+              <div class="image-source-tabs" role="tablist" aria-label="画像入力方法">
+                <button class="source-tab active" id="urlSourceTab" type="button">URL</button>
+                <button class="source-tab" id="uploadSourceTab" type="button">アップロード</button>
+              </div>
+              <div class="field image-source-panel active" id="urlSourcePanel">
+                <label for="imageUrlInput">URL</label>
+                <input id="imageUrlInput" type="url" placeholder="https://x.com/user/status/123" />
+              </div>
+              <div class="image-source-panel" id="uploadSourcePanel">
+                <label class="upload-btn" for="fileInput">画像を選択
+                  <input class="file-input" id="fileInput" type="file" accept="image/*" multiple />
+                </label>
+              </div>
             </div>
-            <div class="field image-source-panel active" id="urlSourcePanel">
-              <label for="imageUrlInput">URL</label>
-              <input id="imageUrlInput" type="url" placeholder="https://x.com/user/status/123" />
+
+            <div class="image-stage" id="imageStage">
+              画像がここに表示されます
             </div>
-            <div class="image-source-panel" id="uploadSourcePanel">
-              <label class="upload-btn" for="fileInput">画像を選択
-                <input class="file-input" id="fileInput" type="file" accept="image/*" multiple />
-              </label>
-            </div>
+            <div class="empty" id="imageStatus"></div>
           </div>
 
-          <div class="image-stage" id="imageStage">
-            画像がここに表示されます
-          </div>
-          <div class="empty" id="imageStatus"></div>
+          <div class="input-pane">
+            <div class="grid-2">
+              <div class="field">
+                <label for="firstImpressionInput">第一印象</label>
+                <textarea id="firstImpressionInput" rows="1" wrap="off" placeholder="最初に目に入ったもの、感情、印象の強さなど"></textarea>
+              </div>
 
-          <div class="grid-2">
-            <div class="field">
-              <label for="firstImpressionInput">第一印象</label>
-              <textarea id="firstImpressionInput" rows="1" wrap="off" placeholder="最初に目に入ったもの、感情、印象の強さなど"></textarea>
-            </div>
+              <div class="field">
+                <label for="compositionInput">構図 / レイアウトの分析</label>
+                <textarea id="compositionInput" rows="3" placeholder="視線誘導、余白、重心、主役と脇役、画面分割など"></textarea>
+              </div>
 
-            <div class="field">
-              <label for="compositionInput">構図 / レイアウトの分析</label>
-              <textarea id="compositionInput" rows="3" placeholder="視線誘導、余白、重心、主役と脇役、画面分割など"></textarea>
-            </div>
+              <div class="field">
+                <label for="colorInput">配色 / 明暗の分析</label>
+                <textarea id="colorInput" rows="3" placeholder="色数、コントラスト、明度差、彩度、光源、見やすさなど"></textarea>
+              </div>
 
-            <div class="field">
-              <label for="colorInput">配色 / 明暗の分析</label>
-              <textarea id="colorInput" rows="3" placeholder="色数、コントラスト、明度差、彩度、光源、見やすさなど"></textarea>
-            </div>
-
-            <div class="field">
-              <label for="otherInput">その他</label>
-              <textarea id="otherInput" rows="3" placeholder="気づいたこと、真似したい点、次に試すことなど"></textarea>
+              <div class="field">
+                <label for="otherInput">その他</label>
+                <textarea id="otherInput" rows="3" placeholder="気づいたこと、真似したい点、次に試すことなど"></textarea>
+              </div>
             </div>
           </div>
         </form>
