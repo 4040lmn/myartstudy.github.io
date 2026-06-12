@@ -151,6 +151,9 @@
       height: auto !important;
       opacity: 1 !important;
       pointer-events: auto !important;
+    }
+
+    .app:not(.sidebar-collapsed) .note-list {
       overflow-x: hidden !important;
       overflow-y: auto !important;
     }
@@ -2194,8 +2197,12 @@
         }
 
         if (mergedJson !== localJson) {
+          const previousActiveNote = getActiveNote();
+          const previousActiveId = activeId;
           notes = mergedNotes;
-          activeId = notes[0]?.id ?? null;
+          activeId = notes.some(note => note.id === previousActiveId) || isMeaningfulNote(previousActiveNote)
+            ? previousActiveId
+            : notes[0]?.id ?? null;
           dirty = false;
           persistNotes();
           render();
