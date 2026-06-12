@@ -27,6 +27,7 @@
       --radius: 8px;
       --rail: clamp(44px, 5.8vw, 62px);
       --rail-button: clamp(32px, 4.2vw, 40px);
+      --sidebar-open: clamp(260px, 26vw, 420px);
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -57,7 +58,7 @@
 
     .app {
       display: grid;
-      grid-template-columns: minmax(300px, 360px) minmax(320px, 1fr);
+      grid-template-columns: var(--sidebar-open) minmax(320px, 1fr);
       min-height: 100svh;
       overflow-x: hidden;
       transition: none;
@@ -851,8 +852,12 @@
     }
 
     @media (max-width: 520px) {
+      :root {
+        --sidebar-open: clamp(220px, 74vw, 300px);
+      }
+
       .app {
-        grid-template-columns: minmax(260px, 300px) minmax(320px, 1fr);
+        grid-template-columns: var(--sidebar-open) minmax(320px, 1fr);
       }
 
       .app:not(.sidebar-collapsed) .sidebar {
@@ -1062,9 +1067,6 @@
     let googleSyncInFlight = false;
     let confirmResolver = null;
     let cleanNotesJson = JSON.stringify(notes);
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchStartedOnInput = false;
 
     function uid() {
       return "note-" + Date.now().toString(36);
@@ -2311,28 +2313,6 @@
     els.sidebarToggle.addEventListener("click", () => {
       setSidebarCollapsed(!els.app.classList.contains("sidebar-collapsed"));
     });
-    els.app.addEventListener("click", event => {
-      if (els.app.classList.contains("sidebar-collapsed")) return;
-      if (event.target.closest(".sidebar-toggle, .brand, .toolbar, .note-list")) return;
-      setSidebarCollapsed(true);
-    });
-    document.addEventListener("touchstart", event => {
-      const touch = event.changedTouches[0];
-      touchStartX = touch.clientX;
-      touchStartY = touch.clientY;
-      touchStartedOnInput = Boolean(event.target.closest("input, textarea, button"));
-    }, { passive: true });
-    document.addEventListener("touchend", event => {
-      if (touchStartedOnInput) return;
-      const touch = event.changedTouches[0];
-      const dx = touch.clientX - touchStartX;
-      const dy = touch.clientY - touchStartY;
-      const horizontal = Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.4;
-      if (!horizontal) return;
-
-      if (dx < 0) setSidebarCollapsed(false);
-      if (dx > 0) setSidebarCollapsed(true);
-    }, { passive: true });
     els.lightboxClose.addEventListener("click", closeLightbox);
     els.lightbox.addEventListener("click", event => {
       if (event.target === els.lightbox) closeLightbox();
