@@ -773,18 +773,7 @@
     }
 
     @media (max-width: 920px) {
-      .app {
-        grid-template-columns: var(--rail) minmax(320px, 1fr);
-      }
-
-      .app.sidebar-collapsed {
-        grid-template-columns: var(--rail) minmax(320px, 1fr);
-      }
-
-      .sidebar {
-        max-height: none;
-      }
-
+      .sidebar,
       .app.sidebar-collapsed .sidebar {
         max-height: none;
       }
@@ -800,14 +789,6 @@
     }
 
     @media (max-width: 520px) {
-      .app {
-        grid-template-columns: var(--rail) minmax(320px, 1fr);
-      }
-
-      .app.sidebar-collapsed {
-        grid-template-columns: var(--rail) minmax(320px, 1fr);
-      }
-
       .app:not(.sidebar-collapsed) .sidebar {
         width: min(300px, calc(100vw - 28px));
         padding: 12px;
@@ -938,7 +919,7 @@
       <p class="confirm-message" id="confirmMessage"></p>
       <div class="confirm-actions">
         <button class="btn" id="confirmCancel" type="button">キャンセル</button>
-        <button class="btn danger" id="confirmOk" type="button">削除</button>
+        <button class="btn danger" id="confirmOk" type="button">OK</button>
       </div>
     </div>
   </div>
@@ -1262,7 +1243,7 @@
       clearDraftCookie();
       switchMode();
       render();
-      await syncToGoogleDrive();
+      scheduleGoogleSync();
     }
 
     function persistCurrentFormForReload() {
@@ -1320,7 +1301,6 @@
       saveDraftCookie();
       updateSaveStatus();
       renderImageStage(getActiveNote());
-      scheduleGoogleSync();
     }
 
     function updateSaveStatus() {
@@ -1377,7 +1357,7 @@
 
     function getDisplayImageUrls(note) {
       const fromImages = Array.isArray(note?.images)
-        ? note.images.map(image => image.resolved || image.url || image.source)
+        ? note.images.map(image => image.resolved || image.source)
         : [];
       return uniqueUrls(fromImages.length ? fromImages : [note?.resolvedImageUrl, note?.imageUrl]);
     }
@@ -1445,7 +1425,7 @@
       const note = getActiveNote();
       if (!note) return;
 
-      note.images = (note.images ?? []).filter(image => (image.resolved || image.url || image.source) !== url);
+      note.images = (note.images ?? []).filter(image => (image.resolved || image.source) !== url);
       note.resolvedImageUrl = note.images[0]?.resolved ?? "";
       dirty = true;
       updateSaveStatus();
@@ -2315,10 +2295,6 @@
     });
 
     window.addEventListener("pagehide", () => {
-      persistCurrentFormForReload();
-    });
-
-    window.addEventListener("beforeunload", () => {
       persistCurrentFormForReload();
     });
 
