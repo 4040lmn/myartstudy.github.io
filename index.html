@@ -85,6 +85,7 @@
       gap: 14px;
       min-width: 0;
       min-height: 0;
+      overflow: hidden;
       align-items: center;
       transition: none;
     }
@@ -145,6 +146,8 @@
       height: auto !important;
       opacity: 1 !important;
       pointer-events: auto !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
     }
 
     .app:not(.sidebar-collapsed) .brand {
@@ -296,6 +299,8 @@
       background: rgba(8, 8, 8, .84);
       padding: 10px;
       box-shadow: var(--shadow);
+      flex: 1 1 auto;
+      min-height: 0;
     }
 
     .note-card {
