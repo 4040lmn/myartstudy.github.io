@@ -44,6 +44,7 @@
       font-family: var(--sans);
       font-size: 80%;
       letter-spacing: 0;
+      overflow: hidden;
     }
 
     button,
@@ -58,14 +59,14 @@
 
     .app {
       display: grid;
-      grid-template-columns: var(--sidebar-open) minmax(320px, 1fr);
+      grid-template-columns: var(--sidebar-open) minmax(0, 1fr);
       height: 100svh;
       overflow-x: hidden;
       transition: none;
     }
 
     .app.sidebar-collapsed {
-      grid-template-columns: var(--rail) minmax(320px, 1fr);
+      grid-template-columns: var(--rail) minmax(0, 1fr);
     }
 
     .sidebar {
@@ -132,6 +133,7 @@
 
     .brand,
     .toolbar,
+    .note-tools,
     .note-list {
       display: none !important;
       width: 0 !important;
@@ -145,6 +147,7 @@
 
     .app:not(.sidebar-collapsed) .brand,
     .app:not(.sidebar-collapsed) .toolbar,
+    .app:not(.sidebar-collapsed) .note-tools,
     .app:not(.sidebar-collapsed) .note-list {
       display: flex !important;
       width: auto !important;
@@ -171,8 +174,17 @@
       overflow: visible !important;
     }
 
+    .app:not(.sidebar-collapsed) .note-tools {
+      display: grid !important;
+      width: auto !important;
+      height: auto !important;
+      min-height: 35px !important;
+      overflow: visible !important;
+    }
+
     .app.sidebar-collapsed .brand,
     .app.sidebar-collapsed .toolbar,
+    .app.sidebar-collapsed .note-tools,
     .app.sidebar-collapsed .note-list {
       display: none !important;
       width: 0 !important;
@@ -242,6 +254,21 @@
       justify-content: start;
     }
 
+    .note-tools {
+      display: grid;
+      grid-template-columns: 35px minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+    }
+
+    .note-search {
+      min-width: 0;
+      height: 35px;
+      padding: 0 11px;
+      font-size: 12px;
+      font-family: var(--mono);
+    }
+
     .btn {
       border: 1px solid var(--line);
       color: var(--text);
@@ -278,6 +305,12 @@
       border-color: #555;
     }
 
+    .btn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
     .btn:active {
       transform: translateY(1px);
     }
@@ -294,8 +327,12 @@
     }
 
     input:focus,
-    textarea:focus {
+    textarea:focus,
+    button:focus-visible,
+    .note-card:focus-visible {
       border-color: var(--focus);
+      outline: 2px solid rgba(255, 255, 255, .22);
+      outline-offset: 2px;
     }
 
     .note-list {
@@ -385,6 +422,13 @@
       background: #191919;
     }
 
+    .note-card mark {
+      background: rgba(255, 255, 255, .18);
+      color: var(--text);
+      border-radius: 4px;
+      padding: 0 2px;
+    }
+
     .note-title {
       grid-column: 2;
       font-weight: 800;
@@ -452,7 +496,7 @@
 
     .main {
       grid-column: 2;
-      min-width: 320px;
+      min-width: 0;
       height: 100svh;
       padding: 24px;
       display: flex;
@@ -894,7 +938,7 @@
       }
 
       .app {
-        grid-template-columns: var(--sidebar-open) minmax(320px, 1fr);
+        grid-template-columns: var(--sidebar-open) minmax(0, 1fr);
       }
 
       .app:not(.sidebar-collapsed) .sidebar {
@@ -931,10 +975,13 @@
         </div>
       </section>
 
-      <div class="toolbar">
-        <button class="btn primary icon-btn" id="newBtn" title="新規ノート" aria-label="新規ノート">
-          <img src="icon-new-note.svg" alt="" />
-        </button>
+      <div class="note-tools">
+        <div class="toolbar">
+          <button class="btn primary icon-btn" id="newBtn" title="新規ノート" aria-label="新規ノート">
+            <img src="icon-new-note.svg" alt="" />
+          </button>
+        </div>
+        <input class="note-search" id="noteSearchInput" type="search" placeholder="ノート検索" aria-label="ノート検索" autocomplete="off" />
       </div>
 
       <div class="note-list" id="noteList"></div>
@@ -1058,6 +1105,7 @@
       currentDate: document.getElementById("currentDate"),
       saveStatus: document.getElementById("saveStatus"),
       noteList: document.getElementById("noteList"),
+      noteSearch: document.getElementById("noteSearchInput"),
       newBtn: document.getElementById("newBtn"),
       saveBtn: document.getElementById("saveBtn"),
       deleteBtn: document.getElementById("deleteBtn"),
@@ -1090,6 +1138,7 @@
 
     let notes = normalizeNotes(loadNotes());
     let activeId = notes[0]?.id ?? null;
+    let noteSearchQuery = "";
     let dirty = false;
     let imageResolveToken = 0;
     let imageResolveTimer = 0;
@@ -1436,6 +1485,7 @@
     function updateSaveStatus() {
       els.saveStatus.textContent = dirty ? "未保存" : "保存済";
       els.saveStatus.classList.toggle("unsaved", dirty);
+      els.saveBtn.disabled = !dirty;
     }
 
     function updateClock() {
@@ -1617,8 +1667,9 @@
 
     function renderNoteList() {
       els.noteList.innerHTML = "";
+      const visibleNotes = getVisibleNotes();
 
-      notes.forEach(note => {
+      visibleNotes.forEach(note => {
         const card = document.createElement("div");
         card.className = "note-card" + (note.id === activeId ? " active" : "");
         card.role = "button";
@@ -1636,8 +1687,8 @@
         const thumb = card.querySelector(".note-thumb");
         const title = getNoteTitle(note);
         const urls = getDisplayImageUrls(note);
-        card.querySelector(".note-title").textContent = title;
-        card.querySelector(".note-preview").textContent = getPreviewText(note);
+        setHighlightedText(card.querySelector(".note-title"), title);
+        setHighlightedText(card.querySelector(".note-preview"), getPreviewText(note));
         card.querySelector(".note-meta span:first-child").textContent = formatDate(note.updatedAt);
         card.querySelector(".note-meta span:last-child").textContent = urls.length ? `IMG ${urls.length}` : "TEXT";
 
@@ -1679,14 +1730,15 @@
         els.noteList.appendChild(card);
       });
 
-      if (notes.length === 0) {
+      if (notes.length === 0 || visibleNotes.length === 0) {
         const empty = document.createElement("div");
         empty.className = "empty";
-        empty.textContent = "ノートがありません。";
+        empty.textContent = notes.length === 0 ? "ノートがありません。" : "一致するノートがありません。";
         els.noteList.appendChild(empty);
       }
 
       els.noteCount.textContent = String(notes.length);
+      els.noteList.querySelector(".note-card.active")?.scrollIntoView({ block: "nearest" });
     }
 
     function writeForm(note) {
@@ -1714,6 +1766,46 @@
       const urls = getDisplayImageUrls(note);
       renderImages(els.imageStage, urls, "画像エリア");
       els.imageStatus.textContent = urls.length ? `${urls.length} / ${MAX_IMAGES} images` : "";
+    }
+
+    function getSearchText(note) {
+      return [
+        getNoteTitle(note),
+        note.imageUrl,
+        note.firstImpression,
+        note.composition,
+        note.color,
+        note.other,
+        formatDate(note.updatedAt)
+      ].filter(Boolean).join(" ").toLowerCase();
+    }
+
+    function getVisibleNotes() {
+      const query = noteSearchQuery.trim().toLowerCase();
+      if (!query) return notes;
+      return notes.filter(note => getSearchText(note).includes(query));
+    }
+
+    function setHighlightedText(element, text) {
+      element.textContent = "";
+      const query = noteSearchQuery.trim();
+      if (!query) {
+        element.textContent = text;
+        return;
+      }
+
+      const lowerText = text.toLowerCase();
+      const lowerQuery = query.toLowerCase();
+      const index = lowerText.indexOf(lowerQuery);
+      if (index === -1) {
+        element.textContent = text;
+        return;
+      }
+
+      element.append(document.createTextNode(text.slice(0, index)));
+      const mark = document.createElement("mark");
+      mark.textContent = text.slice(index, index + query.length);
+      element.append(mark, document.createTextNode(text.slice(index + query.length)));
     }
 
     function scheduleImageResolve() {
@@ -2349,6 +2441,10 @@
       els.updatedAt.textContent = `最終更新: ${formatDate(note?.updatedAt)}`;
     }
 
+    function isEditableTarget(target) {
+      return Boolean(target?.closest?.("input, textarea, select, [contenteditable='true']"));
+    }
+
     [els.firstImpression, els.composition, els.color, els.other].forEach(input => {
       input.addEventListener("input", () => {
         resizeTextarea(input);
@@ -2357,6 +2453,10 @@
     });
 
     els.imageUrl.addEventListener("input", scheduleImageResolve);
+    els.noteSearch.addEventListener("input", () => {
+      noteSearchQuery = els.noteSearch.value;
+      renderNoteList();
+    });
     els.fileInput.addEventListener("change", handleFileUpload);
     els.urlSourceTab.addEventListener("click", () => switchImageSource("url"));
     els.uploadSourceTab.addEventListener("click", () => switchImageSource("upload"));
@@ -2414,11 +2514,50 @@
         closeConfirm(false);
       }
 
+      if (event.key === "Escape" && document.activeElement === els.noteSearch) {
+        els.noteSearch.value = "";
+        noteSearchQuery = "";
+        renderNoteList();
+        els.noteSearch.blur();
+      }
+
       const isSave = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s";
       if (isSave) {
         event.preventDefault();
         saveNote();
       }
+
+      const isSearch = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f";
+      if (isSearch) {
+        event.preventDefault();
+        if (els.app.classList.contains("sidebar-collapsed")) setSidebarCollapsed(false);
+        els.noteSearch.focus();
+        els.noteSearch.select();
+      }
+
+      if (isEditableTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey) return;
+
+      if (event.key.toLowerCase() === "n") {
+        event.preventDefault();
+        els.newBtn.click();
+      }
+
+      if (event.key === "/") {
+        event.preventDefault();
+        if (els.app.classList.contains("sidebar-collapsed")) setSidebarCollapsed(false);
+        els.noteSearch.focus();
+      }
+
+      if (event.key.toLowerCase() === "b") {
+        event.preventDefault();
+        setSidebarCollapsed(!els.app.classList.contains("sidebar-collapsed"));
+      }
+    });
+
+    window.addEventListener("beforeunload", event => {
+      if (!dirty) return;
+      event.preventDefault();
+      event.returnValue = "";
     });
 
     document.addEventListener("visibilitychange", () => {
