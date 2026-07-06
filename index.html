@@ -1,0 +1,2972 @@
+﻿<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://api.fxtwitter.com https://api.microlink.io https://www.googleapis.com https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com; upgrade-insecure-requests" />
+  <title>MyArtStudy</title>
+  <link rel="manifest" href="study-note-manifest.webmanifest" />
+  <link rel="icon" href="myartstudy-icon.svg" type="image/svg+xml" />
+  <link rel="shortcut icon" href="myartstudy-icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="myartstudy-icon.svg" />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070707;
+      --panel: #101010;
+      --panel-2: #151515;
+      --line: #313131;
+      --line-soft: #222;
+      --text: #f2f2f2;
+      --muted: #9a9a9a;
+      --dim: #656565;
+      --danger: #ff4d4d;
+      --ok: #cfcfcf;
+      --focus: #ffffff;
+      --shadow: 0 0 0 1px #252525, 0 20px 60px rgba(0, 0, 0, .45);
+      --radius: 8px;
+      --rail: clamp(44px, 5.8vw, 62px);
+      --rail-button: clamp(32px, 4.2vw, 40px);
+      --sidebar-open: clamp(260px, 26vw, 420px);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100svh;
+      background: #090909;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 80%;
+      letter-spacing: 0;
+      overflow: hidden;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: var(--sidebar-open) minmax(0, 1fr);
+      height: 100svh;
+      overflow-x: hidden;
+      transition: none;
+    }
+
+    .app.sidebar-collapsed {
+      grid-template-columns: var(--rail) minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      left: 0;
+      top: 0;
+      z-index: 20;
+      width: var(--rail);
+      height: 100svh;
+      max-height: 100svh;
+      border-right: 1px solid transparent;
+      background: transparent;
+      backdrop-filter: none;
+      padding: clamp(8px, 1.8vw, 12px) clamp(4px, 1vw, 8px);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      scrollbar-width: none;
+      align-items: center;
+      transition: none;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .app:not(.sidebar-collapsed) .sidebar {
+      position: sticky;
+      width: auto;
+      padding: 18px;
+      align-items: stretch;
+      background: #101010;
+      border-right: 1px solid var(--line);
+      box-shadow: none;
+    }
+
+    .app:not(.sidebar-collapsed)::after {
+      content: none;
+    }
+
+    .app.sidebar-collapsed .sidebar {
+      padding: clamp(8px, 1.8vw, 12px) clamp(4px, 1vw, 8px);
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .sidebar-toggle {
+      border: 1px solid var(--line);
+      color: var(--text);
+      background: #111;
+      border-radius: 8px;
+      width: var(--rail-button);
+      height: var(--rail-button);
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: 18px;
+      box-shadow: var(--shadow);
+      transition: none;
+    }
+
+    .sidebar-backdrop {
+      display: none;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .app {
+        transition: grid-template-columns .24s ease;
+      }
+
+      .sidebar {
+        transition: width .24s ease, background .24s ease, border-color .24s ease, box-shadow .24s ease, padding .24s ease;
+      }
+
+      .sidebar-toggle {
+        transition: transform .18s ease, background .18s ease, border-color .18s ease;
+      }
+
+      .image-pane,
+      .image-stage {
+        transition: min-height .2s ease, padding .2s ease, box-shadow .2s ease;
+      }
+    }
+
+    .brand,
+    .toolbar,
+    .note-tools,
+    .note-list {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    .app:not(.sidebar-collapsed) .brand,
+    .app:not(.sidebar-collapsed) .toolbar,
+    .app:not(.sidebar-collapsed) .note-tools,
+    .app:not(.sidebar-collapsed) .note-list {
+      display: flex !important;
+      width: auto !important;
+      height: auto !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+
+    .app:not(.sidebar-collapsed) .note-list {
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+    }
+
+    .app:not(.sidebar-collapsed) .brand {
+      display: grid !important;
+      flex: 0 0 auto !important;
+      min-height: 74px !important;
+      overflow: visible !important;
+    }
+
+    .app:not(.sidebar-collapsed) .toolbar {
+      display: grid !important;
+      width: 35px !important;
+      height: 35px !important;
+      min-height: 35px !important;
+      flex: 0 0 35px;
+      overflow: visible !important;
+    }
+
+    .app:not(.sidebar-collapsed) .note-tools {
+      display: grid !important;
+      width: auto !important;
+      height: auto !important;
+      min-height: 35px !important;
+      overflow: visible !important;
+    }
+
+    .app.sidebar-collapsed .brand,
+    .app.sidebar-collapsed .toolbar,
+    .app.sidebar-collapsed .note-tools,
+    .app.sidebar-collapsed .note-list {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      overflow: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    .brand {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      background: #101010;
+      box-shadow: var(--shadow);
+      min-height: fit-content;
+      grid-template-rows: auto auto;
+      gap: 8px;
+      overflow: visible;
+      flex: 0 0 auto;
+      min-block-size: 74px;
+    }
+
+    .brand-kicker {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 0;
+      min-width: 0;
+      line-height: 1.45;
+    }
+
+    .brand h1 {
+      font-size: 20px;
+      margin: 0;
+      line-height: 1.2;
+      letter-spacing: .08em;
+    }
+
+    .status-line {
+      margin-top: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+      align-items: center;
+      min-width: 0;
+      min-height: 20px;
+    }
+
+    .status-line > span:first-child {
+      min-width: 0;
+      overflow: visible;
+      white-space: normal;
+    }
+
+    .status-badge {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 3px 9px;
+      background: #0b0b0b;
+      color: var(--ok);
+      white-space: nowrap;
+      justify-self: end;
+    }
+
+    .status-badge.unsaved {
+      color: var(--danger);
+      border-color: rgba(255, 77, 77, .55);
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 35px;
+      gap: 8px;
+      align-items: center;
+      justify-content: start;
+    }
+
+    .note-tools {
+      display: grid;
+      grid-template-columns: 35px minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+    }
+
+    .note-search {
+      min-width: 0;
+      height: 35px;
+      padding: 0 11px;
+      font-size: 12px;
+      font-family: var(--mono);
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      color: var(--text);
+      background: #111;
+      border-radius: 8px;
+      padding: 11px 12px;
+      font-weight: 700;
+      font-size: 13px;
+      transition: border-color .15s ease, background .15s ease, transform .15s ease;
+    }
+
+    .icon-btn {
+      width: 35px;
+      height: 35px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      flex: 0 0 35px;
+    }
+
+    .icon-btn img {
+      width: 16px;
+      height: 16px;
+      display: block;
+      filter: invert(1);
+    }
+
+    .icon-btn.primary img {
+      filter: none;
+    }
+
+    .btn:hover {
+      background: #181818;
+      border-color: #555;
+    }
+
+    .btn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn.primary {
+      background: #f2f2f2;
+      color: #050505;
+      border-color: #fff;
+    }
+
+    .btn.danger {
+      color: var(--danger);
+      border-color: rgba(255, 77, 77, .45);
+    }
+
+    input:focus,
+    textarea:focus,
+    button:focus-visible,
+    .note-card:focus-visible {
+      border-color: var(--focus);
+      outline: 2px solid rgba(255, 255, 255, .22);
+      outline-offset: 2px;
+    }
+
+    .note-list {
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+      gap: 10px;
+      min-height: 0;
+      padding-right: 3px;
+      scrollbar-color: #2a2a2a #080808;
+      scrollbar-width: thin;
+    }
+
+    .note-list::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .note-list::-webkit-scrollbar-track {
+      background: #080808;
+    }
+
+    .note-list::-webkit-scrollbar-thumb {
+      background: #2a2a2a;
+      border: 2px solid #080808;
+      border-radius: 999px;
+    }
+
+    .note-list::-webkit-scrollbar-thumb:hover {
+      background: #3a3a3a;
+    }
+
+    .app:not(.sidebar-collapsed) .note-list {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(8, 8, 8, .84);
+      padding: 10px;
+      margin-top: 2px;
+      box-shadow: var(--shadow);
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    .note-card {
+      border: 1px solid var(--line-soft);
+      background: #0e0e0e;
+      border-radius: 8px;
+      padding: 13px;
+      display: grid;
+      grid-template-columns: 59px 1fr 26px;
+      gap: 8px;
+      text-align: left;
+      color: inherit;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .note-thumb {
+      width: 59px;
+      aspect-ratio: 1;
+      border: 1px solid var(--line-soft);
+      border-radius: 6px;
+      background: #080808;
+      overflow: hidden;
+      grid-row: span 3;
+      display: grid;
+      place-items: center;
+      position: relative;
+      color: var(--dim);
+      font-family: var(--mono);
+      font-size: 10px;
+    }
+
+    .note-thumb.multi {
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      padding: 1px;
+      background: var(--line-soft);
+      place-items: stretch;
+    }
+
+    .note-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      background: #080808;
+      min-width: 0;
+      min-height: 0;
+    }
+
+    .note-thumb.multi img:first-child:nth-last-child(3) {
+      grid-row: span 2;
+    }
+
+    .note-thumb-count {
+      position: absolute;
+      right: 3px;
+      bottom: 3px;
+      border: 1px solid rgba(255, 255, 255, .28);
+      border-radius: 999px;
+      background: rgba(0, 0, 0, .72);
+      color: var(--text);
+      padding: 1px 5px;
+      font-family: var(--mono);
+      font-size: 9px;
+      line-height: 1.4;
+    }
+
+    .note-card:hover {
+      border-color: #555;
+      background: #141414;
+    }
+
+    .note-card.active {
+      border-color: #fff;
+      background: #191919;
+    }
+
+    .note-card mark {
+      background: rgba(255, 255, 255, .18);
+      color: var(--text);
+      border-radius: 4px;
+      padding: 0 2px;
+    }
+
+    .note-title {
+      grid-column: 2;
+      font-weight: 800;
+      font-size: 14px;
+      line-height: 1.35;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .note-preview {
+      grid-column: 2 / 4;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 55px;
+    }
+
+    .note-meta {
+      grid-column: 2 / 4;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--dim);
+      font-family: var(--mono);
+      font-size: 10px;
+      border-top: 1px solid var(--line-soft);
+      padding-top: 8px;
+    }
+
+    .note-delete {
+      grid-column: 3;
+      grid-row: 1;
+      width: 26px;
+      height: 26px;
+      border: 1px solid rgba(255, 77, 77, .4);
+      border-radius: 8px;
+      background: #111;
+      display: grid;
+      place-items: center;
+      padding: 0;
+    }
+
+    .note-delete img {
+      width: 13px;
+      height: 13px;
+      filter: invert(1);
+      display: block;
+    }
+
+    .note-delete:hover {
+      border-color: rgba(255, 77, 77, .8);
+      background: #1a1010;
+    }
+
+    .note-card .note-title,
+    .note-card .note-preview,
+    .note-card .note-meta {
+      min-width: 0;
+    }
+
+    .main {
+      grid-column: 2;
+      min-width: 0;
+      height: 100svh;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow: hidden;
+    }
+
+    .topbar {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(14, 14, 14, .9);
+      box-shadow: var(--shadow);
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .topbar .brand-kicker {
+      margin-bottom: 0;
+      flex-wrap: nowrap;
+    }
+
+    #updatedAt {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .document {
+      flex: 1;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(13, 13, 13, .93);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .editor {
+      padding: 20px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 16px;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .image-pane {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: grid;
+      gap: 12px;
+      align-self: start;
+      background: rgba(13, 13, 13, .96);
+      padding-bottom: 4px;
+    }
+
+    .input-pane {
+      min-height: 0;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    label {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #080808;
+      color: var(--text);
+      padding: 13px 14px;
+      outline: none;
+    }
+
+    textarea {
+      min-height: calc(3em * 1.7 + 26px);
+      resize: none;
+      overflow: hidden;
+      line-height: 1.7;
+    }
+
+    #firstImpressionInput {
+      min-height: calc(1em * 1.7 + 26px);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .image-stage {
+      border: 1px dashed #444;
+      border-radius: 8px;
+      padding: 12px;
+      background: #090909;
+      min-height: clamp(180px, 32svh, 360px);
+      display: grid;
+      place-items: center;
+      color: var(--dim);
+      overflow: hidden;
+    }
+
+    .image-controls {
+      display: grid;
+      gap: 10px;
+    }
+
+    .image-source-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .source-tab {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #111;
+      color: var(--muted);
+      padding: 7px 11px;
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .source-tab.active {
+      background: #f1f1f1;
+      border-color: #fff;
+      color: #050505;
+    }
+
+    .image-source-panel {
+      display: none;
+    }
+
+    .image-source-panel.active {
+      display: block;
+    }
+
+    .upload-btn {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #111;
+      color: var(--text);
+      min-height: 48px;
+      padding: 0 14px;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 12px;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
+    }
+
+    .upload-btn:hover,
+    .upload-btn:focus-within {
+      background: #f1f1f1;
+      border-color: #fff;
+      color: #050505;
+      transform: translateY(-1px);
+    }
+
+    .file-input {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .image-gallery {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+    }
+
+    .image-item {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #111;
+      overflow: hidden;
+    }
+
+    .image-gallery img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: contain;
+      cursor: zoom-in;
+    }
+
+    .image-hide {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(8, 8, 8, .88);
+      color: var(--text);
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .image-hide:hover {
+      border-color: #666;
+      background: #181818;
+    }
+
+    .image-stage img {
+      max-width: 100%;
+      max-height: clamp(180px, 42svh, 520px);
+      border-radius: 8px;
+      display: block;
+      border: 1px solid var(--line);
+      background: #111;
+    }
+
+    .empty {
+      color: var(--dim);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .footer-hud {
+      border-top: 1px solid var(--line);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--dim);
+      font-family: var(--mono);
+      font-size: 11px;
+      background: #080808;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .footer-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-left: auto;
+    }
+
+    .google-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .google-actions button {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #111;
+      color: var(--text);
+      padding: 5px 10px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      max-width: min(360px, 72vw);
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .google-actions button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .google-actions button.signed-in {
+      border-color: rgba(74, 222, 128, .7);
+      background: rgba(74, 222, 128, .08);
+    }
+
+    .google-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--dim);
+      flex: 0 0 auto;
+    }
+
+    .google-actions button.signed-in .google-dot {
+      background: #4ade80;
+      box-shadow: 0 0 8px rgba(74, 222, 128, .85);
+    }
+
+    .google-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(0, 0, 0, .88);
+    }
+
+    .lightbox img {
+      max-width: min(96vw, 1400px);
+      max-height: 92svh;
+      object-fit: contain;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #080808;
+    }
+
+    .lightbox-close {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #111;
+      color: var(--text);
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      .btn,
+      .source-tab,
+      .google-actions button,
+      input,
+      textarea,
+      .upload-btn {
+        font-size: 16px;
+      }
+
+      .btn,
+      .icon-btn,
+      .sidebar-toggle,
+      .source-tab,
+      .upload-btn,
+      .note-delete,
+      .image-hide,
+      .google-actions button {
+        min-width: 44px;
+        min-height: 44px;
+      }
+    }
+
+    .confirm-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 110;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(0, 0, 0, .72);
+    }
+
+    .confirm-panel {
+      width: min(360px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #101010;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .confirm-message {
+      margin: 0;
+      line-height: 1.7;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .confirm-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    @media (min-width: 1100px) and (orientation: landscape) {
+      .editor {
+        grid-template-columns: minmax(320px, .9fr) minmax(420px, 1.1fr);
+        grid-template-rows: minmax(0, 1fr);
+        align-items: stretch;
+      }
+
+      .image-pane {
+        position: sticky;
+        top: 20px;
+        max-height: calc(100svh - 140px);
+        overflow: auto;
+      }
+
+      .input-pane {
+        max-height: calc(100svh - 170px);
+      }
+
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .image-stage {
+        min-height: clamp(260px, 54svh, 620px);
+      }
+
+      .image-stage img {
+        max-height: clamp(260px, 64svh, 720px);
+      }
+    }
+
+    @media (max-width: 920px) {
+      .main {
+        padding: 14px;
+      }
+
+      .topbar,
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 520px) {
+      :root {
+        --rail: 52px;
+        --rail-button: 44px;
+        --sidebar-open: 100vw;
+      }
+
+      .app {
+        grid-template-columns: var(--rail) minmax(0, 1fr);
+      }
+
+      .sidebar,
+      .app:not(.sidebar-collapsed) .sidebar,
+      .app.sidebar-collapsed .sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 60;
+        width: var(--rail);
+        height: 100svh;
+        max-height: 100svh;
+        background: #101010;
+        border-right: 1px solid var(--line);
+        padding: 12px;
+        transition: width .24s ease, box-shadow .24s ease, padding .24s ease;
+      }
+
+      .app:not(.sidebar-collapsed) .sidebar {
+        width: var(--sidebar-open);
+        box-shadow: 18px 0 50px rgba(0, 0, 0, .55);
+      }
+
+      .app:not(.sidebar-collapsed) .sidebar-toggle {
+        align-self: flex-end;
+      }
+
+      .app:not(.sidebar-collapsed) .brand {
+        min-height: auto !important;
+        height: auto !important;
+        padding: 12px 16px;
+        gap: 6px;
+        overflow: visible !important;
+      }
+
+      .app:not(.sidebar-collapsed) .brand-kicker,
+      .app:not(.sidebar-collapsed) .status-line {
+        line-height: 1.5;
+      }
+
+      .app:not(.sidebar-collapsed) .status-line {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+      }
+
+      .app:not(.sidebar-collapsed) .status-badge {
+        align-self: start;
+        max-width: 6.5em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .sidebar-toggle {
+        transition: transform .18s ease, background .18s ease, border-color .18s ease;
+      }
+
+      .app:not(.sidebar-collapsed) .sidebar-toggle {
+        transform: translateX(-2px);
+      }
+
+      .app:not(.sidebar-collapsed) .main {
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .sidebar-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: block;
+        border: 0;
+        padding: 0;
+        background: rgba(0, 0, 0, .48);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity .24s ease, visibility .24s ease;
+      }
+
+      .app:not(.sidebar-collapsed) .sidebar-backdrop {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+      }
+
+      .main {
+        padding: 10px;
+        gap: 10px;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .topbar {
+        padding: 10px;
+      }
+
+      .document {
+        overflow: visible;
+        min-height: auto;
+      }
+
+      .editor {
+        display: flex;
+        flex-direction: column;
+        overflow: visible;
+        padding: 12px;
+        gap: 12px;
+      }
+
+      .image-pane {
+        position: sticky;
+        top: 0;
+        z-index: 14;
+        align-self: stretch;
+        padding: 8px 0 10px;
+        border-bottom: 1px solid var(--line-soft);
+        background: rgba(13, 13, 13, .98);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, .34);
+      }
+
+      .input-pane {
+        overflow: visible;
+        padding-right: 0;
+      }
+
+      .toolbar {
+        grid-template-columns: 44px;
+      }
+
+      .app:not(.sidebar-collapsed) .toolbar {
+        width: 44px !important;
+        height: 44px !important;
+        min-height: 44px !important;
+        flex-basis: 44px;
+      }
+
+      .app:not(.sidebar-collapsed) .note-tools {
+        min-height: 44px !important;
+      }
+
+      .icon-btn {
+        width: 44px;
+        height: 44px;
+        flex-basis: 44px;
+      }
+
+      .note-tools {
+        grid-template-columns: 44px minmax(0, 1fr);
+      }
+
+      .note-search {
+        height: 44px;
+      }
+
+      .note-list {
+        gap: 8px;
+      }
+
+      .note-card {
+        grid-template-columns: 52px 1fr 44px;
+        padding: 10px;
+      }
+
+      .note-thumb {
+        width: 52px;
+      }
+
+      .note-delete {
+        width: 44px;
+        height: 44px;
+      }
+
+      .image-controls {
+        grid-template-columns: 1fr;
+      }
+
+      .image-source-tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .source-tab {
+        border-radius: 8px;
+      }
+
+      .image-stage {
+        min-height: clamp(132px, 30svh, 240px);
+      }
+
+      .image-stage img {
+        max-height: clamp(132px, 30svh, 240px);
+      }
+
+      .image-gallery {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      }
+
+      textarea {
+        min-height: 132px;
+      }
+
+      #firstImpressionInput {
+        min-height: 88px;
+      }
+
+      @supports selector(:has(*)) {
+        .editor:has(.input-pane textarea:focus) {
+          gap: 10px;
+        }
+
+        .editor:has(.input-pane textarea:focus) .image-pane {
+          gap: 8px;
+          padding-top: 6px;
+          padding-bottom: 8px;
+        }
+
+        .editor:has(.input-pane textarea:focus) .image-controls,
+        .editor:has(.input-pane textarea:focus) #imageStatus {
+          display: none;
+        }
+
+        .editor:has(.input-pane textarea:focus) .image-stage {
+          min-height: clamp(104px, 24svh, 180px);
+          padding: 8px;
+        }
+
+        .editor:has(.input-pane textarea:focus) .image-stage img {
+          max-height: clamp(104px, 24svh, 180px);
+        }
+      }
+
+      .footer-hud {
+        position: sticky;
+        bottom: 0;
+        z-index: 10;
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+        gap: 8px;
+        align-items: stretch;
+      }
+
+      .footer-hud > span:first-child {
+        display: none;
+      }
+
+      .google-actions {
+        width: 100%;
+      }
+
+      .google-actions button {
+        max-width: none;
+      }
+
+      .footer-actions {
+        margin-left: 0;
+      }
+
+      .confirm-modal,
+      .lightbox {
+        padding: 14px;
+        padding-bottom: calc(14px + env(safe-area-inset-bottom));
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app" id="app">
+    <aside class="sidebar">
+      <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Toggle notes">&lt;</button>
+      <section class="brand">
+        <div class="brand-kicker">
+          <span>STUDY NOTE SYSTEM</span>
+          <span id="clock">--:--:--</span>
+        </div>
+        <div class="status-line">
+          <span id="currentDate">----/--/--</span>
+          <span id="saveStatus" class="status-badge">保存済</span>
+        </div>
+      </section>
+
+      <div class="note-tools">
+        <div class="toolbar">
+          <button class="btn primary icon-btn" id="newBtn" title="新規ノート" aria-label="新規ノート">
+            <img src="icon-new-note.svg" alt="" />
+          </button>
+        </div>
+        <input class="note-search" id="noteSearchInput" type="search" placeholder="ノート検索" aria-label="ノート検索" autocomplete="off" />
+      </div>
+
+      <div class="note-list" id="noteList"></div>
+    </aside>
+    <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" aria-label="ノート一覧を閉じる"></button>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <div class="brand-kicker">
+            <span id="updatedAt">最終更新: --</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="document">
+        <form class="editor" id="editor">
+
+          <div class="image-pane">
+            <div class="image-controls">
+              <div class="image-source-tabs" role="tablist" aria-label="画像入力方法">
+                <button class="source-tab active" id="urlSourceTab" type="button">URL</button>
+                <button class="source-tab" id="uploadSourceTab" type="button">アップロード</button>
+              </div>
+              <div class="field image-source-panel active" id="urlSourcePanel">
+                <label for="imageUrlInput">URL</label>
+                <input id="imageUrlInput" type="url" placeholder="https://x.com/user/status/123" />
+              </div>
+              <div class="image-source-panel" id="uploadSourcePanel">
+                <label class="upload-btn" for="fileInput">画像を選択
+                  <input class="file-input" id="fileInput" type="file" accept="image/*" multiple />
+                </label>
+              </div>
+            </div>
+
+            <div class="image-stage" id="imageStage">
+              画像がここに表示されます
+            </div>
+            <div class="empty" id="imageStatus"></div>
+          </div>
+
+          <div class="input-pane">
+            <div class="grid-2">
+              <div class="field">
+                <label for="firstImpressionInput">第一印象</label>
+                <textarea id="firstImpressionInput" rows="1" placeholder="最初に目に入ったもの、感情、印象の強さなど"></textarea>
+              </div>
+
+              <div class="field">
+                <label for="compositionInput">構図 / レイアウトの分析</label>
+                <textarea id="compositionInput" rows="3" placeholder="視線誘導、余白、重心、主役と脇役、画面分割など"></textarea>
+              </div>
+
+              <div class="field">
+                <label for="colorInput">配色 / 明暗の分析</label>
+                <textarea id="colorInput" rows="3" placeholder="色数、コントラスト、明度差、彩度、光源、見やすさなど"></textarea>
+              </div>
+
+              <div class="field">
+                <label for="otherInput">その他</label>
+                <textarea id="otherInput" rows="3" placeholder="気づいたこと、真似したい点、次に試すことなど"></textarea>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div class="footer-hud">
+          <span>LOCAL STORAGE: ACTIVE</span>
+          <span>NOTES: <span id="noteCount">0</span></span>
+          <span class="google-actions">
+            <button type="button" id="googleAuthBtn"><span class="google-dot"></span><span class="google-label">GOOGLE LOGIN</span></button>
+            <span id="googleStatus">GOOGLE: NOT CONFIGURED</span>
+          </span>
+          <span class="footer-actions">
+            <button class="btn icon-btn edit-only" id="saveBtn" title="保存" aria-label="保存">
+              <img src="icon-save.svg" alt="" />
+            </button>
+            <button class="btn danger icon-btn edit-only" id="deleteBtn" title="削除" aria-label="削除">
+              <img src="icon-delete.svg" alt="" />
+            </button>
+          </span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="lightbox hidden" id="lightbox" role="dialog" aria-modal="true">
+    <button class="lightbox-close" id="lightboxClose" type="button" aria-label="閉じる">×</button>
+    <img id="lightboxImage" alt="" />
+  </div>
+
+  <div class="confirm-modal hidden" id="confirmModal" role="dialog" aria-modal="true">
+    <div class="confirm-panel">
+      <p class="confirm-message" id="confirmMessage"></p>
+      <div class="confirm-actions">
+        <button class="btn" id="confirmCancel" type="button">キャンセル</button>
+        <button class="btn danger" id="confirmOk" type="button">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <script>
+    const STORAGE_KEY = "myartstudy-notes-v1";
+    const LEGACY_STORAGE_KEY = "study-note-hud-v1";
+    const SIDEBAR_COLLAPSED_KEY = "study-note-sidebar-collapsed";
+    const DRAFT_COOKIE_KEY = "myartstudy-draft";
+    const DRAFT_COOKIE_MAX = 3600;
+    const APP_VERSION = "20260613-no-sw";
+    const GOOGLE_CONNECTED_KEY = "myartstudy-google-connected";
+    const MAX_IMAGES = 4;
+    const URL_RESOLVE_DELAY = 450;
+    const GOOGLE_CLIENT_ID = "974365192376-5sam85v0lus50gphvgun5kvddlbei3u6.apps.googleusercontent.com";
+    const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata";
+    const GOOGLE_NOTES_FILE = "study-notes.json";
+
+    const els = {
+      app: document.getElementById("app"),
+      sidebarToggle: document.getElementById("sidebarToggle"),
+      sidebarBackdrop: document.getElementById("sidebarBackdrop"),
+      clock: document.getElementById("clock"),
+      currentDate: document.getElementById("currentDate"),
+      saveStatus: document.getElementById("saveStatus"),
+      noteList: document.getElementById("noteList"),
+      noteSearch: document.getElementById("noteSearchInput"),
+      newBtn: document.getElementById("newBtn"),
+      saveBtn: document.getElementById("saveBtn"),
+      deleteBtn: document.getElementById("deleteBtn"),
+      editOnly: Array.from(document.querySelectorAll(".edit-only")),
+      editor: document.getElementById("editor"),
+      updatedAt: document.getElementById("updatedAt"),
+      noteCount: document.getElementById("noteCount"),
+      imageUrl: document.getElementById("imageUrlInput"),
+      fileInput: document.getElementById("fileInput"),
+      urlSourceTab: document.getElementById("urlSourceTab"),
+      uploadSourceTab: document.getElementById("uploadSourceTab"),
+      urlSourcePanel: document.getElementById("urlSourcePanel"),
+      uploadSourcePanel: document.getElementById("uploadSourcePanel"),
+      imageStage: document.getElementById("imageStage"),
+      imageStatus: document.getElementById("imageStatus"),
+      firstImpression: document.getElementById("firstImpressionInput"),
+      composition: document.getElementById("compositionInput"),
+      color: document.getElementById("colorInput"),
+      other: document.getElementById("otherInput"),
+      lightbox: document.getElementById("lightbox"),
+      lightboxImage: document.getElementById("lightboxImage"),
+      lightboxClose: document.getElementById("lightboxClose"),
+      googleAuthBtn: document.getElementById("googleAuthBtn"),
+      googleStatus: document.getElementById("googleStatus"),
+      confirmModal: document.getElementById("confirmModal"),
+      confirmMessage: document.getElementById("confirmMessage"),
+      confirmCancel: document.getElementById("confirmCancel"),
+      confirmOk: document.getElementById("confirmOk")
+    };
+
+    let notes = normalizeNotes(loadNotes());
+    let activeId = notes[0]?.id ?? null;
+    let noteSearchQuery = "";
+    let dirty = false;
+    let imageResolveToken = 0;
+    let imageResolveTimer = 0;
+    let googleTokenClient = null;
+    let googleAccessToken = "";
+    let googleTokenExpiresAt = 0;
+    let googleSignedIn = localStorage.getItem(GOOGLE_CONNECTED_KEY) === "1";
+    let googleAuthInFlight = false;
+    let googleAutoReconnectTried = false;
+    let pendingGoogleLoad = false;
+    let pendingGoogleSave = false;
+    let googleSyncTimer = 0;
+    let googleSyncInFlight = false;
+    let confirmResolver = null;
+    let cleanNotesJson = JSON.stringify(notes);
+    let sidebarSwipeStartX = 0;
+    let sidebarSwipeStartY = 0;
+    let sidebarSwipeActive = false;
+    let sidebarSwipeMode = "";
+
+    function uid() {
+      return "note-" + Date.now().toString(36);
+    }
+
+    function nowISO() {
+      return new Date().toISOString();
+    }
+
+    async function disableServiceWorkerCache() {
+      try {
+        if ("serviceWorker" in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(registration => registration.unregister()));
+        }
+
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(key => caches.delete(key)));
+        }
+
+        localStorage.setItem("myartstudy-app-version", APP_VERSION);
+      } catch (error) {
+        console.warn("Service worker cleanup skipped", error);
+      }
+    }
+
+    function formatDate(value) {
+      if (!value) return "--";
+      return new Intl.DateTimeFormat("ja-JP", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      }).format(new Date(value));
+    }
+
+    function getFixedTitle(note) {
+      return formatDate(note?.createdAt);
+    }
+
+    function loadNotes() {
+      try {
+        let raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+          if (raw) localStorage.setItem(STORAGE_KEY, raw);
+        }
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function normalizeNotes(items) {
+      return items.map(note => {
+        const images = Array.isArray(note.images) ? note.images : [];
+        const migrated = images.length > 0
+          ? images
+          : [note.resolvedImageUrl, note.imageUrl].filter(Boolean).slice(0, 1).map(url => ({
+              source: note.imageUrl || url,
+              resolved: url,
+              type: "remote"
+            }));
+
+        return {
+          ...note,
+          title: note.title ?? "",
+          imageUrl: note.imageUrl ?? "",
+          resolvedImageUrl: note.resolvedImageUrl ?? "",
+          images: migrated.slice(0, MAX_IMAGES)
+        };
+      });
+    }
+
+    function persistNotes() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+      cleanNotesJson = JSON.stringify(notes);
+    }
+
+    function readCookie(name) {
+      return document.cookie
+        .split("; ")
+        .find(row => row.startsWith(name + "="))
+        ?.slice(name.length + 1) ?? "";
+    }
+
+    function writeCookie(name, value, maxAge = 604800) {
+      document.cookie = `${name}=${value}; Max-Age=${maxAge}; Path=/; SameSite=Lax`;
+    }
+
+    function clearDraftCookie() {
+      writeCookie(DRAFT_COOKIE_KEY, "", 0);
+    }
+
+    function compactDraft(draft) {
+      return Object.fromEntries(Object.entries(draft).filter(([, value]) => value !== ""));
+    }
+
+    function encodeDraftCookie(draft) {
+      const compact = compactDraft(draft);
+      const textKeys = ["f", "m", "c", "o", "u"];
+      let value = encodeURIComponent(JSON.stringify(compact));
+
+      while (value.length > DRAFT_COOKIE_MAX) {
+        const key = textKeys.reduce((longest, current) =>
+          String(compact[current] ?? "").length > String(compact[longest] ?? "").length ? current : longest
+        , textKeys[0]);
+
+        if (!compact[key]) break;
+        compact[key] = String(compact[key]).slice(0, Math.max(0, Math.floor(String(compact[key]).length * .85)));
+        value = encodeURIComponent(JSON.stringify(compactDraft(compact)));
+      }
+
+      return value.length <= DRAFT_COOKIE_MAX ? value : "";
+    }
+
+    function saveDraftCookie() {
+      const note = getActiveNote();
+      if (!note) return;
+
+      const draft = {
+        i: note.id,
+        t: Date.now(),
+        u: els.imageUrl.value.trim(),
+        f: els.firstImpression.value,
+        m: els.composition.value,
+        c: els.color.value,
+        o: els.other.value
+      };
+      const encoded = encodeDraftCookie(draft);
+      if (encoded) writeCookie(DRAFT_COOKIE_KEY, encoded);
+    }
+
+    function restoreDraftCookie() {
+      try {
+        const raw = readCookie(DRAFT_COOKIE_KEY);
+        if (!raw) return false;
+
+        const draft = JSON.parse(decodeURIComponent(raw));
+        const note = getActiveNote();
+        if (!note || draft.i !== note.id) return false;
+
+        const noteUpdated = new Date(note.updatedAt).getTime();
+        if (Number(draft.t ?? 0) <= noteUpdated) return false;
+
+        note.imageUrl = draft.u ?? note.imageUrl;
+        note.firstImpression = draft.f ?? note.firstImpression;
+        note.composition = draft.m ?? note.composition;
+        note.color = draft.c ?? note.color;
+        note.other = draft.o ?? note.other;
+        dirty = true;
+        writeForm(note);
+        renderImageStage(note);
+        renderNoteList();
+        updateSaveStatus();
+        return true;
+      } catch {
+        clearDraftCookie();
+        return false;
+      }
+    }
+
+    function restoreCleanNotes() {
+      try {
+        notes = normalizeNotes(JSON.parse(cleanNotesJson));
+      } catch {
+        notes = normalizeNotes(loadNotes());
+        cleanNotesJson = JSON.stringify(notes);
+      }
+      dirty = false;
+      imageResolveToken += 1;
+      clearTimeout(imageResolveTimer);
+      updateSaveStatus();
+    }
+
+    function getNoteTitle(note) {
+      return getFixedTitle(note);
+    }
+
+    function createNote() {
+      const date = nowISO();
+      const note = {
+        id: uid(),
+        title: "",
+        imageUrl: "",
+        resolvedImageUrl: "",
+        images: [],
+        firstImpression: "",
+        composition: "",
+        color: "",
+        other: "",
+        createdAt: date,
+        updatedAt: date
+      };
+
+      notes.unshift(note);
+      activeId = note.id;
+      dirty = false;
+      persistNotes();
+      switchMode();
+      render();
+    }
+
+    function getActiveNote() {
+      return notes.find(note => note.id === activeId) ?? null;
+    }
+
+    function askConfirm(message, okText = "OK") {
+      els.confirmMessage.textContent = message;
+      els.confirmOk.textContent = okText;
+      els.confirmModal.classList.remove("hidden");
+      els.confirmCancel.focus();
+
+      return new Promise(resolve => {
+        confirmResolver = resolve;
+      });
+    }
+
+    function closeConfirm(value) {
+      if (!confirmResolver) return;
+      const resolve = confirmResolver;
+      confirmResolver = null;
+      els.confirmModal.classList.add("hidden");
+      resolve(value);
+    }
+
+    function readForm() {
+      const note = getActiveNote();
+      if (!note) return null;
+
+      const updated = {
+        ...note,
+        imageUrl: els.imageUrl.value.trim(),
+        firstImpression: els.firstImpression.value.trim(),
+        composition: els.composition.value.trim(),
+        color: els.color.value.trim(),
+        other: els.other.value.trim()
+      };
+      updated.title = getNoteTitle(updated);
+      return updated;
+    }
+
+    function switchImageSource(source) {
+      const isUrl = source === "url";
+      els.urlSourceTab.classList.toggle("active", isUrl);
+      els.uploadSourceTab.classList.toggle("active", !isUrl);
+      els.urlSourcePanel.classList.toggle("active", isUrl);
+      els.uploadSourcePanel.classList.toggle("active", !isUrl);
+    }
+
+    async function saveNote() {
+      const updated = readForm();
+      if (!updated) return;
+
+      updated.updatedAt = nowISO();
+      notes = notes.map(note => note.id === updated.id ? updated : note);
+      notes.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      activeId = updated.id;
+      dirty = false;
+      persistNotes();
+      clearDraftCookie();
+      switchMode();
+      render();
+      scheduleGoogleSync();
+    }
+
+    function persistCurrentFormForReload() {
+      if (!dirty) return false;
+
+      const updated = readForm();
+      if (!updated) return false;
+
+      updated.updatedAt = nowISO();
+      notes = notes.map(note => note.id === updated.id ? updated : note);
+      notes.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      activeId = updated.id;
+      dirty = false;
+      persistNotes();
+      saveDraftCookie();
+      updateSaveStatus();
+      return true;
+    }
+
+    async function deleteNote() {
+      if (!activeId) return;
+      if (!await askConfirm("このノートを削除しますか？", "削除")) return;
+
+      notes = notes.filter(note => note.id !== activeId);
+      activeId = notes[0]?.id ?? null;
+      dirty = false;
+      persistNotes();
+      clearDraftCookie();
+      scheduleGoogleSync();
+
+      if (!activeId) createNote();
+      else {
+        switchMode();
+        render();
+      }
+    }
+
+    async function deleteNoteById(noteId) {
+      if (!noteId) return;
+      if (!await askConfirm("このノートを削除しますか？", "削除")) return;
+
+      notes = notes.filter(note => note.id !== noteId);
+      if (activeId === noteId) activeId = notes[0]?.id ?? null;
+      dirty = false;
+      persistNotes();
+      clearDraftCookie();
+      scheduleGoogleSync();
+
+      if (!activeId) createNote();
+      else render();
+    }
+
+    function markDirty() {
+      dirty = true;
+      saveDraftCookie();
+      updateSaveStatus();
+      renderImageStage(getActiveNote());
+    }
+
+    function updateSaveStatus() {
+      els.saveStatus.textContent = dirty ? "未保存" : "保存済";
+      els.saveStatus.classList.toggle("unsaved", dirty);
+      els.saveBtn.disabled = !dirty;
+    }
+
+    function updateClock() {
+      const now = new Date();
+
+      els.clock.textContent = new Intl.DateTimeFormat("ja-JP", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      }).format(now);
+
+      els.currentDate.textContent = new Intl.DateTimeFormat("ja-JP", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        weekday: "short"
+      }).format(now);
+    }
+
+    function getPreviewText(note) {
+      const text = [
+        note.firstImpression,
+        note.composition,
+        note.color,
+        note.other
+      ].filter(Boolean).join(" / ");
+
+      return text || "No content yet.";
+    }
+
+    function isLikelyImageUrl(url) {
+      return /^data:image\//i.test(url) || /\.(avif|bmp|gif|jpe?g|png|svg|webp)(\?.*)?$/i.test(url);
+    }
+
+    function isAllowedImageSourceInput(url) {
+      if (/^data:image\//i.test(url)) return true;
+
+      try {
+        const parsed = new URL(url);
+        return parsed.protocol === "https:" || parsed.protocol === "http:";
+      } catch {
+        return false;
+      }
+    }
+
+    function uniqueUrls(urls) {
+      return Array.from(new Set(urls.filter(Boolean))).slice(0, MAX_IMAGES);
+    }
+
+    function getDisplayImageUrls(note) {
+      const fromImages = Array.isArray(note?.images)
+        ? note.images.map(image => image.resolved || image.source)
+        : [];
+      return uniqueUrls(fromImages.length ? fromImages : [note?.resolvedImageUrl, note?.imageUrl]);
+    }
+
+    function getTwitterStatusId(url) {
+      const match = url.match(/(?:twitter\.com|x\.com|fxtwitter\.com|fixupx\.com)\/[^/]+\/status(?:es)?\/(\d{2,20})/i);
+      return match?.[1] ?? "";
+    }
+
+    function pickTwitterMediaUrls(status) {
+      const media = status?.media ?? {};
+      const urls = [
+        ...(media.photos ?? []).map(item => item.url),
+        ...(media.videos ?? []).map(item => item.thumbnail_url),
+        media.external?.thumbnail_url,
+        ...(media.all ?? []).map(item => item.url || item.thumbnail_url)
+      ];
+
+      return uniqueUrls(urls);
+    }
+
+    async function resolveTwitterImageUrls(url) {
+      const statusId = getTwitterStatusId(url);
+      if (!statusId) return [];
+
+      const response = await fetch("https://api.fxtwitter.com/2/status/" + statusId);
+      if (!response.ok) throw new Error("twitter media request failed");
+
+      const data = await response.json();
+      return pickTwitterMediaUrls(data.status);
+    }
+
+    async function resolveImageUrls(url) {
+      if (!url) return [];
+      if (!isAllowedImageSourceInput(url)) return [];
+      if (isLikelyImageUrl(url)) return [url];
+
+      if (getTwitterStatusId(url)) {
+        return resolveTwitterImageUrls(url);
+      }
+
+      const endpoint = "https://api.microlink.io/?url=" + encodeURIComponent(url);
+      const response = await fetch(endpoint);
+      if (!response.ok) throw new Error("metadata request failed");
+
+      const data = await response.json();
+      return uniqueUrls([data?.data?.image?.url, data?.data?.screenshot?.url]);
+    }
+
+    function setActiveImages(source, urls, type = "remote") {
+      const note = getActiveNote();
+      if (!note) return;
+
+      const cleaned = uniqueUrls(urls);
+      note.imageUrl = type === "remote" ? source : "";
+      note.resolvedImageUrl = cleaned[0] ?? "";
+      note.images = cleaned.map((url, index) => ({
+        source: type === "file" ? `upload-${index + 1}` : source,
+        resolved: url,
+        type
+      }));
+    }
+
+    function hideActiveImage(url) {
+      const note = getActiveNote();
+      if (!note) return;
+
+      note.images = (note.images ?? []).filter(image => (image.resolved || image.source) !== url);
+      note.resolvedImageUrl = note.images[0]?.resolved ?? "";
+      dirty = true;
+      updateSaveStatus();
+      renderImageStage(note);
+      renderNoteList();
+    }
+
+    function renderImages(container, urls, emptyText) {
+      container.innerHTML = "";
+
+      if (urls.length === 0) {
+        container.textContent = emptyText;
+        return;
+      }
+
+      const gallery = document.createElement("div");
+      gallery.className = "image-gallery";
+
+      urls.forEach((url, index) => {
+        const item = document.createElement("div");
+        item.className = "image-item";
+
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = `Note image ${index + 1}`;
+        img.loading = "lazy";
+        img.onerror = () => { img.remove(); };
+        img.addEventListener("click", () => openLightbox(url, img.alt));
+        item.appendChild(img);
+
+        const hideButton = document.createElement("button");
+        hideButton.className = "image-hide";
+        hideButton.type = "button";
+        hideButton.title = "非表示";
+        hideButton.setAttribute("aria-label", "画像を非表示");
+        hideButton.textContent = "×";
+        hideButton.addEventListener("click", event => {
+          event.stopPropagation();
+          hideActiveImage(url);
+        });
+        item.appendChild(hideButton);
+
+        gallery.appendChild(item);
+      });
+
+      container.appendChild(gallery);
+    }
+
+    function openLightbox(url, alt) {
+      els.lightboxImage.src = url;
+      els.lightboxImage.alt = alt;
+      els.lightbox.classList.remove("hidden");
+    }
+
+    function closeLightbox() {
+      els.lightbox.classList.add("hidden");
+      els.lightboxImage.removeAttribute("src");
+    }
+
+    function isCompactViewport() {
+      return window.matchMedia("(max-width: 520px)").matches;
+    }
+
+    function isSidebarCollapsed() {
+      return els.app.classList.contains("sidebar-collapsed");
+    }
+
+    function renderNoteList() {
+      els.noteList.innerHTML = "";
+      const visibleNotes = getVisibleNotes();
+
+      visibleNotes.forEach(note => {
+        const card = document.createElement("div");
+        card.className = "note-card" + (note.id === activeId ? " active" : "");
+        card.role = "button";
+        card.tabIndex = 0;
+        card.innerHTML = `
+          <div class="note-thumb"></div>
+          <div class="note-title"></div>
+          <button class="note-delete" type="button" title="削除" aria-label="削除">
+            <img src="icon-delete.svg" alt="" />
+          </button>
+          <div class="note-preview"></div>
+          <div class="note-meta"><span></span><span></span></div>
+        `;
+
+        const thumb = card.querySelector(".note-thumb");
+        const title = getNoteTitle(note);
+        const urls = getDisplayImageUrls(note);
+        setHighlightedText(card.querySelector(".note-title"), title);
+        setHighlightedText(card.querySelector(".note-preview"), getPreviewText(note));
+        card.querySelector(".note-meta span:first-child").textContent = formatDate(note.updatedAt);
+        card.querySelector(".note-meta span:last-child").textContent = urls.length ? `IMG ${urls.length}` : "TEXT";
+
+        if (urls.length) {
+          if (urls.length > 1) thumb.classList.add("multi");
+          urls.slice(0, 4).forEach((url, index) => {
+            const img = document.createElement("img");
+            img.src = url;
+            img.alt = `${title} ${index + 1}`;
+            img.loading = "lazy";
+            img.onerror = () => { img.remove(); };
+            thumb.appendChild(img);
+          });
+
+          if (urls.length > 1) {
+            const count = document.createElement("span");
+            count.className = "note-thumb-count";
+            count.textContent = String(urls.length);
+            thumb.appendChild(count);
+          }
+        } else {
+          thumb.textContent = "TEXT";
+        }
+
+        const openNote = async () => {
+          if (dirty) {
+            if (!await askConfirm("未保存の変更を破棄して移動しますか？", "移動")) return;
+            restoreCleanNotes();
+          }
+
+          activeId = note.id;
+          dirty = false;
+          switchMode();
+          render();
+          if (isCompactViewport()) setSidebarCollapsed(true);
+        };
+
+        card.querySelector(".note-delete").addEventListener("click", event => {
+          event.stopPropagation();
+          deleteNoteById(note.id);
+        });
+
+        card.addEventListener("click", openNote);
+        card.addEventListener("keydown", event => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          openNote();
+        });
+
+        els.noteList.appendChild(card);
+      });
+
+      if (notes.length === 0 || visibleNotes.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = notes.length === 0 ? "ノートがありません。" : "一致するノートがありません。";
+        els.noteList.appendChild(empty);
+      }
+
+      els.noteCount.textContent = String(notes.length);
+      els.noteList.querySelector(".note-card.active")?.scrollIntoView({ block: "nearest" });
+    }
+
+    function writeForm(note) {
+      els.imageUrl.value = note?.imageUrl ?? "";
+      els.fileInput.value = "";
+      const hasUploadedImage = (note?.images ?? []).some(image => image.type === "file");
+      switchImageSource(note?.imageUrl || !hasUploadedImage ? "url" : "upload");
+      els.firstImpression.value = note?.firstImpression ?? "";
+      els.composition.value = note?.composition ?? "";
+      els.color.value = note?.color ?? "";
+      els.other.value = note?.other ?? "";
+      resizeTextareas();
+    }
+
+    function resizeTextarea(textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+
+    function resizeTextareas() {
+      [els.firstImpression, els.composition, els.color, els.other].forEach(resizeTextarea);
+    }
+
+    function renderImageStage(note) {
+      const urls = getDisplayImageUrls(note);
+      renderImages(els.imageStage, urls, "画像エリア");
+      els.imageStatus.textContent = urls.length ? `${urls.length} / ${MAX_IMAGES} images` : "";
+    }
+
+    function getSearchText(note) {
+      return [
+        getNoteTitle(note),
+        note.imageUrl,
+        note.firstImpression,
+        note.composition,
+        note.color,
+        note.other,
+        formatDate(note.updatedAt)
+      ].filter(Boolean).join(" ").toLowerCase();
+    }
+
+    function getVisibleNotes() {
+      const query = noteSearchQuery.trim().toLowerCase();
+      if (!query) return notes;
+      return notes.filter(note => getSearchText(note).includes(query));
+    }
+
+    function setHighlightedText(element, text) {
+      element.textContent = "";
+      const query = noteSearchQuery.trim();
+      if (!query) {
+        element.textContent = text;
+        return;
+      }
+
+      const lowerText = text.toLowerCase();
+      const lowerQuery = query.toLowerCase();
+      const index = lowerText.indexOf(lowerQuery);
+      if (index === -1) {
+        element.textContent = text;
+        return;
+      }
+
+      element.append(document.createTextNode(text.slice(0, index)));
+      const mark = document.createElement("mark");
+      mark.textContent = text.slice(index, index + query.length);
+      element.append(mark, document.createTextNode(text.slice(index + query.length)));
+    }
+
+    function scheduleImageResolve() {
+      clearTimeout(imageResolveTimer);
+      markDirty();
+      imageResolveTimer = setTimeout(resolveCurrentUrlImages, URL_RESOLVE_DELAY);
+    }
+
+    async function resolveCurrentUrlImages() {
+      const url = els.imageUrl.value.trim();
+      const token = ++imageResolveToken;
+      els.imageStatus.textContent = "";
+
+      if (!url) {
+        setActiveImages("", []);
+        renderImageStage(getActiveNote());
+        refreshImageStage();
+        renderNoteList();
+        return;
+      }
+
+      els.imageStage.textContent = "画像を読み込み中...";
+
+      try {
+        const urls = await resolveImageUrls(url);
+        if (token !== imageResolveToken) return;
+
+        setActiveImages(url, urls);
+        renderImageStage(getActiveNote());
+
+        if (urls.length === 0) {
+          els.imageStage.textContent = getTwitterStatusId(url)
+            ? "Twitter/Xの画像を取得できませんでした。画像付き投稿か確認してください。"
+            : "画像を取得できませんでした。";
+        } else if (getTwitterStatusId(url)) {
+          els.imageStatus.textContent = `Twitter/Xから${urls.length}枚の画像を取得しました`;
+        } else if (!isLikelyImageUrl(url)) {
+          els.imageStatus.textContent = "リンク先から画像を取得しました";
+        }
+      } catch {
+        if (token !== imageResolveToken) return;
+        setActiveImages(url, []);
+        els.imageStage.textContent = getTwitterStatusId(url)
+          ? "Twitter/Xの画像を取得できませんでした。"
+          : "画像を読み込めませんでした。";
+      }
+
+      refreshImageStage();
+      renderNoteList();
+      scheduleGoogleSync();
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handleFileUpload() {
+      const files = Array.from(els.fileInput.files ?? []).filter(file => file.type.startsWith("image/")).slice(0, MAX_IMAGES);
+      if (files.length === 0) return;
+
+      dirty = true;
+      updateSaveStatus();
+      els.imageStatus.textContent = "アップロード画像を読み込み中...";
+      const urls = await Promise.all(files.map(fileToDataUrl));
+      setActiveImages("", urls, "file");
+      els.imageUrl.value = "";
+      switchImageSource("upload");
+      renderImageStage(getActiveNote());
+      refreshImageStage();
+      renderNoteList();
+      els.imageStatus.textContent = `${urls.length}枚の画像をアップロードしました`;
+      scheduleGoogleSync();
+    }
+
+    function getSharedPayload() {
+      const params = new URLSearchParams(location.search);
+      const sharedUrl = params.get("url") || "";
+      const sharedText = params.get("text") || "";
+      const sharedTitle = params.get("title") || "";
+      const imageCandidate = sharedUrl || (sharedText.match(/https?:\/\/\S+/)?.[0] ?? "");
+
+      if (!sharedUrl && !sharedText && !sharedTitle) return null;
+      return {
+        url: imageCandidate,
+        text: [sharedTitle, sharedText].filter(Boolean).join("\n").trim()
+      };
+    }
+
+    function createNoteFromShare(payload) {
+      const date = nowISO();
+      const note = {
+        id: uid(),
+        title: "",
+        imageUrl: payload.url,
+        resolvedImageUrl: "",
+        images: [],
+        firstImpression: payload.text,
+        composition: "",
+        color: "",
+        other: "",
+        createdAt: date,
+        updatedAt: date
+      };
+
+      notes.unshift(note);
+      activeId = note.id;
+      dirty = true;
+      persistNotes();
+      render();
+      scheduleGoogleSync();
+
+      if (payload.url) {
+        switchImageSource("url");
+        els.imageUrl.value = payload.url;
+        resolveCurrentUrlImages();
+      }
+
+      history.replaceState(null, "", location.pathname);
+    }
+
+    function handleIncomingShare() {
+      const payload = getSharedPayload();
+      if (!payload) return false;
+      createNoteFromShare(payload);
+      return true;
+    }
+
+    function refreshImageStage() {
+      renderImageStage(getActiveNote());
+    }
+
+    function switchMode() {
+      els.editor.classList.remove("hidden");
+      els.editOnly.forEach(el => el.classList.remove("hidden"));
+    }
+
+    function setSidebarCollapsed(collapsed) {
+      els.app.classList.toggle("sidebar-collapsed", collapsed);
+      els.sidebarToggle.textContent = collapsed ? ">" : "<";
+      els.sidebarToggle.setAttribute("aria-label", collapsed ? "Show notes" : "Hide notes");
+      els.sidebarToggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      els.sidebarBackdrop.hidden = collapsed;
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? "1" : "0");
+    }
+
+    function updateGoogleStatus(text) {
+      els.googleStatus.textContent = text;
+    }
+
+    function updateGoogleButton(label = "GOOGLE LOGIN", signedIn = false) {
+      const text = els.googleAuthBtn.querySelector(".google-label");
+      if (text) text.textContent = label;
+      else els.googleAuthBtn.textContent = label;
+      els.googleAuthBtn.classList.toggle("signed-in", signedIn);
+      els.googleAuthBtn.title = signedIn ? label : "GOOGLE LOGIN";
+    }
+
+    function setGoogleSignedIn(signedIn) {
+      googleSignedIn = signedIn;
+      localStorage.setItem(GOOGLE_CONNECTED_KEY, signedIn ? "1" : "0");
+      updateGoogleButton(signedIn ? "GOOGLE: SIGNED IN" : "GOOGLE LOGIN", signedIn);
+    }
+
+    function hasFreshGoogleToken() {
+      return Boolean(googleAccessToken && Date.now() < googleTokenExpiresAt - 60000);
+    }
+
+    function queueGoogleAuth(reason = "save", interactive = false) {
+      if (reason === "load") pendingGoogleLoad = true;
+      else pendingGoogleSave = true;
+
+      if (googleAuthInFlight) {
+        updateGoogleStatus("GOOGLE: RECONNECTING");
+        return true;
+      }
+
+      if (!interactive && googleSignedIn && googleAutoReconnectTried) {
+        updateGoogleStatus("GOOGLE: RECONNECT NEEDED");
+        return false;
+      }
+
+      if (!interactive && googleSignedIn) googleAutoReconnectTried = true;
+      updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECTING" : "GOOGLE: LOGIN NEEDED");
+      requestGoogleLogin(false, interactive || !googleSignedIn);
+      return true;
+    }
+
+    function markGoogleSyncFailed() {
+      pendingGoogleLoad = false;
+      pendingGoogleSave = false;
+      updateGoogleStatus("GOOGLE: SYNC FAILED");
+    }
+
+    function getGoogleErrorMessage(error) {
+      return String(
+        error?.error?.message ||
+        error?.message ||
+        error?.type ||
+        error?.error ||
+        error ||
+        "unknown error"
+      );
+    }
+
+    function markGoogleSyncFailedWithReason(reason, error = null) {
+      pendingGoogleLoad = false;
+      pendingGoogleSave = false;
+      const message = getGoogleErrorMessage(error || reason).toLowerCase();
+      let status = "GOOGLE: SYNC FAILED";
+
+      if (message.includes("origin") || message.includes("referer")) status = "GOOGLE: ORIGIN BLOCKED";
+      if (message.includes("access not configured") || message.includes("api has not been used")) status = "GOOGLE: DRIVE API OFF";
+      if (message.includes("insufficient") || message.includes("permission") || message.includes("forbidden")) status = "GOOGLE: PERMISSION DENIED";
+      if (message.includes("invalid_token") || message.includes("unauthorized") || message.includes("401")) status = "GOOGLE: AUTH FAILED";
+
+      if (status === "GOOGLE: AUTH FAILED") {
+        googleAccessToken = "";
+        googleTokenExpiresAt = 0;
+        googleAutoReconnectTried = true;
+      }
+
+      console.warn("Google sync failed:", reason, error);
+      updateGoogleStatus(status);
+      els.googleStatus.title = `${reason}: ${getGoogleErrorMessage(error)}`;
+    }
+
+    async function parseGoogleError(response, action) {
+      let detail = "";
+      try {
+        const text = await response.text();
+        if (text) {
+          try {
+            detail = JSON.parse(text)?.error?.message || text;
+          } catch {
+            detail = text;
+          }
+        }
+      } catch {
+        detail = "";
+      }
+
+      return new Error(`${action} failed: ${response.status}${detail ? " - " + detail : ""}`);
+    }
+
+    function initGoogleAuth() {
+      if (!GOOGLE_CLIENT_ID) {
+        updateGoogleStatus("GOOGLE: CLIENT ID REQUIRED");
+        els.googleAuthBtn.disabled = true;
+        setGoogleSignedIn(false);
+        return;
+      }
+
+      const isFileOrigin = location.protocol === "file:";
+      if (isFileOrigin) {
+        updateGoogleStatus("GOOGLE: ORIGIN BLOCKED");
+        els.googleStatus.title = "Googleログイン/Drive同期は file:// では失敗しやすいため、http://localhost などのローカルサーバーから開いてください。";
+      }
+
+      if (!window.google?.accounts?.oauth2) {
+        updateGoogleStatus("GOOGLE: LOADING");
+        setTimeout(initGoogleAuth, 500);
+        return;
+      }
+
+      googleTokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: GOOGLE_DRIVE_SCOPE,
+        include_granted_scopes: true,
+        callback: tokenResponse => {
+          googleAuthInFlight = false;
+          if (tokenResponse?.access_token) {
+            googleAccessToken = tokenResponse.access_token;
+            googleTokenExpiresAt = Date.now() + Number(tokenResponse.expires_in ?? 3300) * 1000;
+            googleAutoReconnectTried = false;
+            setGoogleSignedIn(true);
+            updateGoogleStatus("GOOGLE: CONNECTED");
+            if (pendingGoogleLoad) {
+              pendingGoogleLoad = false;
+              loadFromGoogleDrive();
+            } else if (pendingGoogleSave) {
+              pendingGoogleSave = false;
+              syncToGoogleDrive();
+            } else {
+              loadFromGoogleDrive();
+            }
+          } else {
+            if (googleAccessToken) {
+              markGoogleSyncFailedWithReason("token response", tokenResponse);
+            } else {
+              updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECT NEEDED" : "GOOGLE: LOGIN NEEDED");
+            }
+          }
+        },
+        error_callback: error => {
+          googleAuthInFlight = false;
+          if (googleAccessToken) {
+            markGoogleSyncFailedWithReason("login callback", error);
+          } else {
+            console.warn("Google login failed:", error);
+            els.googleStatus.title = `Google login failed: ${getGoogleErrorMessage(error)}`;
+            updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECT NEEDED" : "GOOGLE: LOGIN NEEDED");
+          }
+        }
+      });
+
+      els.googleAuthBtn.disabled = false;
+      setGoogleSignedIn(googleSignedIn);
+      updateGoogleStatus(isFileOrigin ? "GOOGLE: ORIGIN BLOCKED" : "GOOGLE: READY");
+    }
+
+    function requestGoogleLogin(forceConsent = false, interactive = true) {
+      if (!googleTokenClient) {
+        initGoogleAuth();
+        return;
+      }
+
+      if (googleAuthInFlight) return;
+      if (interactive) googleAutoReconnectTried = false;
+
+      googleAuthInFlight = true;
+      try {
+        googleTokenClient.requestAccessToken({ prompt: forceConsent ? "consent" : interactive ? "select_account" : "" });
+      } catch (error) {
+        googleAuthInFlight = false;
+        console.warn("Google login request failed", error);
+        updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECT NEEDED" : "GOOGLE: LOGIN NEEDED");
+      }
+    }
+
+    async function findGoogleNotesFileInSpace(space) {
+      const query = encodeURIComponent(`name = '${GOOGLE_NOTES_FILE}' and trashed = false`);
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}&spaces=${space}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`, {
+        headers: {
+          Authorization: "Bearer " + googleAccessToken
+        }
+      });
+
+      if (!response.ok) throw await parseGoogleError(response, `drive list ${space}`);
+      const data = await response.json();
+      const file = data.files?.[0] ?? null;
+      return file ? { ...file, space } : null;
+    }
+
+    async function findGoogleNotesFile() {
+      const files = [];
+      const errors = [];
+      let successfulLookups = 0;
+
+      for (const space of ["appDataFolder", "drive"]) {
+        try {
+          const file = await findGoogleNotesFileInSpace(space);
+          successfulLookups += 1;
+          if (file) files.push(file);
+        } catch (error) {
+          errors.push(error);
+          console.warn(`Google Drive ${space} lookup failed`, error);
+        }
+      }
+
+      if (successfulLookups === 0 && errors.length) {
+        throw errors[0];
+      }
+
+      return files.sort((a, b) => new Date(b.modifiedTime) - new Date(a.modifiedTime))[0] ?? null;
+    }
+
+    async function uploadGoogleNotesFile(fileId = "", useAppDataFolder = true) {
+      const metadata = {
+        name: GOOGLE_NOTES_FILE,
+        mimeType: "application/json",
+        ...(fileId || !useAppDataFolder ? {} : { parents: ["appDataFolder"] })
+      };
+      const boundary = "study-notes-boundary-" + Date.now();
+      const body = [
+        `--${boundary}`,
+        "Content-Type: application/json; charset=UTF-8",
+        "",
+        JSON.stringify(metadata),
+        `--${boundary}`,
+        "Content-Type: application/json; charset=UTF-8",
+        "",
+        JSON.stringify(notes, null, 2),
+        `--${boundary}--`
+      ].join("\r\n");
+
+      const endpoint = fileId
+        ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
+        : "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
+
+      return fetch(endpoint, {
+        method: fileId ? "PATCH" : "POST",
+        headers: {
+          Authorization: "Bearer " + googleAccessToken,
+          "Content-Type": "multipart/related; boundary=" + boundary
+        },
+        body
+      });
+    }
+
+    async function downloadGoogleNotesFile(fileId) {
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+        headers: {
+          Authorization: "Bearer " + googleAccessToken
+        }
+      });
+
+      if (!response.ok) throw await parseGoogleError(response, "drive download");
+      return response.json();
+    }
+
+    function serializeComparableNotes(value) {
+      return JSON.stringify(normalizeNotes(value));
+    }
+
+    function isMeaningfulNote(note) {
+      return Boolean(
+        note?.imageUrl ||
+        note?.resolvedImageUrl ||
+        (note?.images ?? []).length ||
+        note?.firstImpression ||
+        note?.composition ||
+        note?.color ||
+        note?.other
+      );
+    }
+
+    function mergeNotesByUpdatedAt(localNotes, remoteNotes) {
+      const merged = new Map();
+      const remoteIds = new Set(normalizeNotes(remoteNotes).map(note => note.id));
+      const safeLocalNotes = normalizeNotes(localNotes).filter(note => remoteIds.has(note.id) || isMeaningfulNote(note));
+
+      [...normalizeNotes(remoteNotes), ...safeLocalNotes].forEach(note => {
+        const existing = merged.get(note.id);
+        if (!existing || new Date(note.updatedAt) > new Date(existing.updatedAt)) {
+          merged.set(note.id, note);
+        }
+      });
+
+      return Array.from(merged.values()).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    }
+
+    async function loadFromGoogleDrive() {
+      if (!hasFreshGoogleToken()) {
+        queueGoogleAuth("load", false);
+        return;
+      }
+
+      try {
+        updateGoogleStatus("GOOGLE: LOADING");
+        const existing = await findGoogleNotesFile();
+        if (!existing) {
+          updateGoogleStatus("GOOGLE: SYNCING");
+          let response = await uploadGoogleNotesFile("");
+          if ((response.status === 401 || response.status === 403) && googleSignedIn) {
+            response = await uploadGoogleNotesFile("", false);
+          }
+          if (response.status === 401 || response.status === 403) {
+            markGoogleSyncFailedWithReason("drive create", await parseGoogleError(response, "drive create"));
+            return;
+          }
+          if (!response.ok) throw await parseGoogleError(response, "drive create");
+          updateGoogleStatus("GOOGLE: SYNCED");
+          return;
+        }
+
+        const remoteNotes = await downloadGoogleNotesFile(existing.id);
+        if (!Array.isArray(remoteNotes)) {
+          updateGoogleStatus("GOOGLE: UP TO DATE");
+          return;
+        }
+
+        const normalizedRemoteNotes = normalizeNotes(remoteNotes);
+        const normalizedLocalNotes = normalizeNotes(notes);
+        const mergedNotes = mergeNotesByUpdatedAt(normalizedLocalNotes, normalizedRemoteNotes);
+        const localJson = serializeComparableNotes(normalizedLocalNotes);
+        const remoteJson = serializeComparableNotes(normalizedRemoteNotes);
+        const mergedJson = serializeComparableNotes(mergedNotes);
+        const shouldMigrateToAppData = existing.space !== "appDataFolder";
+
+        if (mergedJson === localJson && mergedJson === remoteJson && !shouldMigrateToAppData) {
+          dirty = false;
+          cleanNotesJson = JSON.stringify(normalizedLocalNotes);
+          updateSaveStatus();
+          updateGoogleStatus("GOOGLE: UP TO DATE");
+          return;
+        }
+
+        if (mergedJson !== localJson) {
+          const previousActiveNote = getActiveNote();
+          const previousActiveId = activeId;
+          notes = mergedNotes;
+          activeId = notes.some(note => note.id === previousActiveId) || isMeaningfulNote(previousActiveNote)
+            ? previousActiveId
+            : notes[0]?.id ?? null;
+          dirty = false;
+          persistNotes();
+          render();
+        }
+
+        if (mergedJson !== remoteJson || shouldMigrateToAppData) {
+          updateGoogleStatus("GOOGLE: SYNCING");
+          let response = await uploadGoogleNotesFile(shouldMigrateToAppData ? "" : existing.id);
+          if ((response.status === 401 || response.status === 403) && shouldMigrateToAppData) {
+            response = await uploadGoogleNotesFile("", false);
+          }
+          if (response.status === 401 || response.status === 403) {
+            markGoogleSyncFailedWithReason("drive merge upload", await parseGoogleError(response, "drive merge upload"));
+            return;
+          }
+          if (!response.ok) throw await parseGoogleError(response, "drive merge upload");
+          updateGoogleStatus("GOOGLE: SYNCED");
+          return;
+        }
+
+        updateGoogleStatus("GOOGLE: LOADED");
+      } catch (error) {
+        markGoogleSyncFailedWithReason("drive load", error);
+      }
+    }
+
+    async function syncToGoogleDrive() {
+      if (!hasFreshGoogleToken()) {
+        queueGoogleAuth("save", false);
+        return;
+      }
+
+      if (googleSyncInFlight) {
+        pendingGoogleSave = true;
+        return;
+      }
+
+      try {
+        googleSyncInFlight = true;
+        const current = readForm();
+        if (current) {
+          current.updatedAt = nowISO();
+          notes = notes.map(note => note.id === current.id ? current : note);
+          dirty = false;
+          persistNotes();
+          updateSaveStatus();
+          renderNoteList();
+          els.updatedAt.textContent = `最終更新: ${formatDate(current.updatedAt)}`;
+        }
+        updateGoogleStatus("GOOGLE: SYNCING");
+        const existing = await findGoogleNotesFile();
+        let uploadFileId = existing?.space === "appDataFolder" ? existing.id : "";
+
+        if (existing) {
+          const remoteNotes = await downloadGoogleNotesFile(existing.id);
+          if (Array.isArray(remoteNotes)) {
+            const normalizedLocalNotes = normalizeNotes(notes);
+            const normalizedRemoteNotes = normalizeNotes(remoteNotes);
+            const mergedNotes = mergeNotesByUpdatedAt(normalizedLocalNotes, normalizedRemoteNotes);
+            const localJson = serializeComparableNotes(normalizedLocalNotes);
+            const mergedJson = serializeComparableNotes(mergedNotes);
+
+            if (mergedJson !== localJson) {
+              notes = mergedNotes;
+              activeId = notes.some(note => note.id === activeId) ? activeId : notes[0]?.id ?? null;
+              dirty = false;
+              persistNotes();
+              render();
+            }
+          }
+        }
+
+        let response = await uploadGoogleNotesFile(uploadFileId);
+        if ((response.status === 401 || response.status === 403) && !uploadFileId) {
+          response = await uploadGoogleNotesFile("", false);
+        }
+        if (response.status === 401 || response.status === 403) {
+          markGoogleSyncFailedWithReason("drive sync upload", await parseGoogleError(response, "drive sync upload"));
+        } else {
+          if (response.ok) clearDraftCookie();
+          if (response.ok) {
+            updateGoogleStatus("GOOGLE: SYNCED");
+          } else {
+            markGoogleSyncFailedWithReason("drive sync upload", await parseGoogleError(response, "drive sync upload"));
+          }
+        }
+      } catch (error) {
+        markGoogleSyncFailedWithReason("drive sync", error);
+      } finally {
+        googleSyncInFlight = false;
+        if (pendingGoogleSave && googleAccessToken) {
+          pendingGoogleSave = false;
+          scheduleGoogleSync();
+        }
+      }
+    }
+
+    function scheduleGoogleSync() {
+      clearTimeout(googleSyncTimer);
+      if (!hasFreshGoogleToken()) {
+        pendingGoogleSave = true;
+        updateGoogleStatus(googleSignedIn ? "GOOGLE: RECONNECT NEEDED" : "GOOGLE: LOGIN NEEDED");
+        return;
+      }
+
+      updateGoogleStatus("GOOGLE: WAITING");
+      googleSyncTimer = setTimeout(syncToGoogleDrive, 1200);
+    }
+
+    async function saveToGoogleDrive() {
+      const current = readForm();
+      if (current) {
+        current.updatedAt = nowISO();
+        notes = notes.map(note => note.id === current.id ? current : note);
+        persistNotes();
+        dirty = false;
+        updateSaveStatus();
+        render();
+      }
+
+      await syncToGoogleDrive();
+    }
+
+    function render() {
+      if (notes.length === 0) {
+        createNote();
+        return;
+      }
+
+      const note = getActiveNote();
+      writeForm(note);
+      renderNoteList();
+      renderImageStage(note);
+      updateSaveStatus();
+      switchMode();
+      els.updatedAt.textContent = `最終更新: ${formatDate(note?.updatedAt)}`;
+    }
+
+    function isEditableTarget(target) {
+      return Boolean(target?.closest?.("input, textarea, select, [contenteditable='true']"));
+    }
+
+    [els.firstImpression, els.composition, els.color, els.other].forEach(input => {
+      input.addEventListener("input", () => {
+        resizeTextarea(input);
+        markDirty();
+      });
+    });
+
+    els.imageUrl.addEventListener("input", scheduleImageResolve);
+    els.noteSearch.addEventListener("input", () => {
+      noteSearchQuery = els.noteSearch.value;
+      renderNoteList();
+    });
+    els.fileInput.addEventListener("change", handleFileUpload);
+    els.urlSourceTab.addEventListener("click", () => switchImageSource("url"));
+    els.uploadSourceTab.addEventListener("click", () => switchImageSource("upload"));
+
+    els.newBtn.addEventListener("click", async () => {
+      if (dirty && !await askConfirm("未保存の変更を破棄して新規ノートを作成しますか？", "作成")) return;
+      if (dirty) restoreCleanNotes();
+      createNote();
+      if (isCompactViewport()) {
+        setSidebarCollapsed(true);
+        els.firstImpression.focus();
+      }
+    });
+    els.saveBtn.addEventListener("click", saveNote);
+    els.deleteBtn.addEventListener("click", deleteNote);
+    els.confirmCancel.addEventListener("click", () => closeConfirm(false));
+    els.confirmOk.addEventListener("click", () => closeConfirm(true));
+    els.confirmModal.addEventListener("click", event => {
+      if (event.target === els.confirmModal) closeConfirm(false);
+    });
+    els.sidebarToggle.addEventListener("click", () => {
+      setSidebarCollapsed(!els.app.classList.contains("sidebar-collapsed"));
+    });
+    els.sidebarBackdrop.addEventListener("click", () => {
+      setSidebarCollapsed(true);
+    });
+    document.addEventListener("touchstart", event => {
+      const touch = event.changedTouches[0];
+      sidebarSwipeStartX = touch.clientX;
+      sidebarSwipeStartY = touch.clientY;
+      sidebarSwipeMode = "";
+
+      const blockedTarget = event.target.closest("input, textarea, select, button, .lightbox, .confirm-modal");
+      if (!isCompactViewport() || blockedTarget) {
+        sidebarSwipeActive = false;
+        return;
+      }
+
+      const collapsed = isSidebarCollapsed();
+      const fromSidebar = Boolean(event.target.closest(".sidebar"));
+      sidebarSwipeMode = collapsed ? "open" : !collapsed && fromSidebar ? "close" : "";
+      sidebarSwipeActive = Boolean(sidebarSwipeMode);
+    }, { passive: true });
+    document.addEventListener("touchend", event => {
+      if (!sidebarSwipeActive) return;
+      sidebarSwipeActive = false;
+
+      const touch = event.changedTouches[0];
+      const dx = touch.clientX - sidebarSwipeStartX;
+      const dy = touch.clientY - sidebarSwipeStartY;
+      const isHorizontalSwipe = Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy) * 1.35;
+      if (!isHorizontalSwipe) return;
+
+      if (sidebarSwipeMode === "open" && dx > 0) setSidebarCollapsed(false);
+      if (sidebarSwipeMode === "close" && dx < 0) setSidebarCollapsed(true);
+    }, { passive: true });
+    els.lightboxClose.addEventListener("click", closeLightbox);
+    els.lightbox.addEventListener("click", event => {
+      if (event.target === els.lightbox) closeLightbox();
+    });
+    els.googleAuthBtn.addEventListener("click", () => {
+      if (hasFreshGoogleToken()) syncToGoogleDrive();
+      else queueGoogleAuth("load", true);
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && !els.lightbox.classList.contains("hidden")) {
+        closeLightbox();
+      }
+
+      if (event.key === "Escape" && !els.confirmModal.classList.contains("hidden")) {
+        closeConfirm(false);
+      }
+
+      if (event.key === "Escape" && document.activeElement === els.noteSearch) {
+        els.noteSearch.value = "";
+        noteSearchQuery = "";
+        renderNoteList();
+        els.noteSearch.blur();
+      }
+
+      const isSave = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s";
+      if (isSave) {
+        event.preventDefault();
+        saveNote();
+      }
+
+      const isSearch = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f";
+      if (isSearch) {
+        event.preventDefault();
+        if (els.app.classList.contains("sidebar-collapsed")) setSidebarCollapsed(false);
+        els.noteSearch.focus();
+        els.noteSearch.select();
+      }
+
+      if (isEditableTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey) return;
+
+      if (event.key.toLowerCase() === "n") {
+        event.preventDefault();
+        els.newBtn.click();
+      }
+
+      if (event.key === "/") {
+        event.preventDefault();
+        if (els.app.classList.contains("sidebar-collapsed")) setSidebarCollapsed(false);
+        els.noteSearch.focus();
+      }
+
+      if (event.key.toLowerCase() === "b") {
+        event.preventDefault();
+        setSidebarCollapsed(!els.app.classList.contains("sidebar-collapsed"));
+      }
+    });
+
+    window.addEventListener("beforeunload", event => {
+      if (!dirty) return;
+      event.preventDefault();
+      event.returnValue = "";
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "hidden") return;
+      if (persistCurrentFormForReload() && hasFreshGoogleToken()) scheduleGoogleSync();
+    });
+
+    window.addEventListener("pagehide", () => {
+      persistCurrentFormForReload();
+    });
+
+    updateClock();
+    setInterval(updateClock, 1000);
+    resizeTextareas();
+    setSidebarCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
+    initGoogleAuth();
+    disableServiceWorkerCache();
+
+    if (!handleIncomingShare()) {
+      if (notes.length === 0) createNote();
+      else render();
+      const restoredDraft = restoreDraftCookie();
+      if (restoredDraft) persistCurrentFormForReload();
+      if (googleSignedIn) setTimeout(loadFromGoogleDrive, 800);
+    }
+  </script>
+</body>
+</html>
