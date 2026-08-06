@@ -1562,6 +1562,31 @@
       flex: 1 1 auto !important;
       min-height: 0 !important;
     }
+
+/* ==========================
+   Export
+========================== */
+
+.export-card{
+    width:1200px;
+    padding:40px;
+    background:#111;
+    color:#fff;
+}
+
+.export-image img{
+    width:100%;
+}
+
+.export-section{
+    margin-top:30px;
+}
+
+.export-first-impression{
+    white-space:pre-wrap;
+    line-height:1.8;
+}
+
   </style>
 </head>
 
@@ -1670,7 +1695,11 @@
             <button class="btn danger icon-btn edit-only" id="deleteBtn" title="削除" aria-label="削除">
               <img src="icon-delete.svg" alt="" />
             </button>
-          </span>
+            </span>
+            <button class="btn icon-btn " edit-only" id="exportPngBtn" title="書き出し" aria-label="書き出し">
+              <img src="フロッピーディスクアイコン1.svg" alt="" />
+            </button>
+
         </div>
       </section>
 
@@ -1761,6 +1790,9 @@
       uploadSourcePanel: document.getElementById("uploadSourcePanel"),
       imageStage: document.getElementById("imageStage"),
       imageStatus: document.getElementById("imageStatus"),
+exportBtn: document.getElementById("exportPngBtn"),
+exportTemplate: document.getElementById("exportTemplate"),
+firstImpression: document.getElementById("firstImpressionInput"),
       firstImpression: document.getElementById("firstImpressionInput"),
       composition: document.getElementById("compositionInput"),
       color: document.getElementById("colorInput"),
