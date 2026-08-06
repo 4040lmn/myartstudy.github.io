@@ -3,12 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://api.fxtwitter.com https://api.microlink.io https://www.googleapis.com https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com; upgrade-insecure-requests" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://api.fxtwitter.com https://api.microlink.io https://www.googleapis.com https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com; upgrade-insecure-requests" />
   <title>MyArtStudy</title>
   <link rel="manifest" href="study-note-manifest.webmanifest" />
   <link rel="icon" href="myartstudy-icon.svg" type="image/svg+xml" />
   <link rel="shortcut icon" href="myartstudy-icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="myartstudy-icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
       color-scheme: dark;
@@ -1186,6 +1189,80 @@
       gap: 8px;
     }
 
+    .png-export-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 120;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(0, 0, 0, .78);
+    }
+
+    .png-export-panel {
+      width: min(1120px, 100%);
+      max-height: calc(100svh - 48px);
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #101010;
+      box-shadow: var(--shadow);
+      padding: 20px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+      gap: 20px;
+    }
+
+    .png-export-preview {
+      width: 100%;
+      max-height: 70svh;
+      object-fit: contain;
+      background: #080808;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+
+    .png-export-controls {
+      display: grid;
+      align-content: start;
+      gap: 12px;
+    }
+
+    .png-export-controls h2 {
+      margin: 0;
+      font-family: "Kiwi Maru", var(--sans);
+      font-size: 20px;
+    }
+
+    .png-export-controls textarea {
+      min-height: 180px;
+      font-family: "Kiwi Maru", var(--sans);
+      font-size: 16px;
+    }
+
+    .png-export-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 720px) {
+      .png-export-modal {
+        padding: 12px;
+      }
+
+      .png-export-panel {
+        max-height: calc(100svh - 24px);
+        grid-template-columns: 1fr;
+        padding: 14px;
+      }
+
+      .png-export-preview {
+        max-height: 44svh;
+      }
+    }
+
     @media (min-width: 1100px) and (orientation: landscape) {
       .editor {
         grid-template-columns: minmax(320px, .9fr) minmax(420px, 1.1fr);
@@ -1710,6 +1787,23 @@
     </div>
   </div>
 
+  <div class="png-export-modal hidden" id="pngExportModal" role="dialog" aria-modal="true" aria-labelledby="pngExportTitle">
+    <div class="png-export-panel">
+      <canvas class="png-export-preview" id="pngExportPreview" aria-label="PNG書き出しプレビュー"></canvas>
+      <div class="png-export-controls">
+        <h2 id="pngExportTitle">PNG書き出し</h2>
+        <div class="field">
+          <label for="pngExportText">第一印象</label>
+          <textarea id="pngExportText" rows="6" placeholder="第一印象を入力"></textarea>
+        </div>
+        <div class="png-export-actions">
+          <button class="btn" id="pngExportCancel" type="button">戻る</button>
+          <button class="btn primary" id="pngExportDownload" type="button">PNGを保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <script>
@@ -1741,6 +1835,11 @@
       noteSearch: document.getElementById("noteSearchInput"),
       newBtn: document.getElementById("newBtn"),
       exportPngBtn: document.getElementById("exportPngBtn"),
+      pngExportModal: document.getElementById("pngExportModal"),
+      pngExportPreview: document.getElementById("pngExportPreview"),
+      pngExportText: document.getElementById("pngExportText"),
+      pngExportCancel: document.getElementById("pngExportCancel"),
+      pngExportDownload: document.getElementById("pngExportDownload"),
       saveBtn: document.getElementById("saveBtn"),
       deleteBtn: document.getElementById("deleteBtn"),
       editOnly: Array.from(document.querySelectorAll(".edit-only")),
@@ -2642,21 +2741,10 @@
       context.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
     }
 
-    async function exportPng() {
-      const note = getActiveNote();
-      const urls = getDisplayImageUrls(note);
-      const impression = els.firstImpression.value.trim();
+    let pngExportImages = [];
+    let pngExportNoteId = "";
 
-      if (!urls.length || !impression) {
-        alert("PNG書き出しには、画像と「第一印象」の両方が必要です。");
-        return;
-      }
-
-      els.exportPngBtn.disabled = true;
-      els.exportPngBtn.textContent = "EXPORTING";
-
-      try {
-        const images = await Promise.all(urls.map(loadImageForPng));
+    function createPngCanvas(images, impression) {
         const canvas = document.createElement("canvas");
         const context = canvas.getContext("2d");
         const width = 1600;
@@ -2667,7 +2755,7 @@
         const tileWidth = (width - padding * 2 - gap * (columns - 1)) / columns;
         const tileHeight = columns === 1 ? 900 : 520;
 
-        context.font = "48px system-ui, sans-serif";
+        context.font = '48px "Kiwi Maru", sans-serif';
         const textLines = wrapCanvasText(context, impression, width - padding * 2);
         const textHeight = Math.max(150, 96 + textLines.length * 68);
         const imageTop = 148;
@@ -2698,11 +2786,69 @@
         context.font = "700 24px ui-monospace, monospace";
         context.fillText("第一印象", padding + 32, textTop + 48);
         context.fillStyle = "#ffffff";
-        context.font = "48px system-ui, sans-serif";
+        context.font = '48px "Kiwi Maru", sans-serif';
         textLines.forEach((line, index) => {
           context.fillText(line, padding + 32, textTop + 112 + index * 68);
         });
+        return canvas;
+    }
 
+    function renderPngExportPreview() {
+      if (!pngExportImages.length) return;
+      const canvas = createPngCanvas(pngExportImages, els.pngExportText.value.trim());
+      els.pngExportPreview.width = canvas.width;
+      els.pngExportPreview.height = canvas.height;
+      els.pngExportPreview.getContext("2d").drawImage(canvas, 0, 0);
+    }
+
+    function closePngExport() {
+      els.pngExportModal.classList.add("hidden");
+      pngExportImages = [];
+      pngExportNoteId = "";
+    }
+
+    async function exportPng() {
+      const note = getActiveNote();
+      const urls = getDisplayImageUrls(note);
+      const impression = els.firstImpression.value.trim();
+
+      if (!urls.length || !impression) {
+        alert("PNG書き出しには、画像と「第一印象」の両方が必要です。");
+        return;
+      }
+
+      els.exportPngBtn.disabled = true;
+      els.exportPngBtn.textContent = "LOADING";
+
+      try {
+        await document.fonts?.load?.('48px "Kiwi Maru"');
+        pngExportImages = await Promise.all(urls.map(loadImageForPng));
+        pngExportNoteId = note?.id ?? "";
+        els.pngExportText.value = impression;
+        renderPngExportPreview();
+        els.pngExportModal.classList.remove("hidden");
+        els.pngExportText.focus();
+      } catch (error) {
+        console.error(error);
+        alert("プレビューを作成できませんでした。外部画像の場合は、画像の配信元がPNG生成用の読み込みを許可していない可能性があります。画像をアップロードしてからお試しください。");
+      } finally {
+        els.exportPngBtn.disabled = false;
+        els.exportPngBtn.textContent = "PNG";
+      }
+    }
+
+    async function downloadPngExport() {
+      if (!pngExportImages.length) return;
+      const impression = els.pngExportText.value.trim();
+      if (!impression) {
+        alert("第一印象を入力してください。");
+        els.pngExportText.focus();
+        return;
+      }
+
+      els.pngExportDownload.disabled = true;
+      try {
+        const canvas = createPngCanvas(pngExportImages, impression);
         const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
         if (!blob) throw new Error("PNGを作成できませんでした");
         const anchor = document.createElement("a");
@@ -2712,10 +2858,9 @@
         setTimeout(() => URL.revokeObjectURL(anchor.href), 1000);
       } catch (error) {
         console.error(error);
-        alert("PNGを書き出せませんでした。外部画像の場合は、画像の配信元がPNG生成用の読み込みを許可していない可能性があります。画像をアップロードしてからお試しください。");
+        alert("PNGを書き出せませんでした。");
       } finally {
-        els.exportPngBtn.disabled = false;
-        els.exportPngBtn.textContent = "PNG";
+        els.pngExportDownload.disabled = false;
       }
     }
 
@@ -3506,6 +3651,12 @@
     });
     els.saveBtn.addEventListener("click", saveNote);
     els.exportPngBtn.addEventListener("click", exportPng);
+    els.pngExportText.addEventListener("input", renderPngExportPreview);
+    els.pngExportCancel.addEventListener("click", closePngExport);
+    els.pngExportDownload.addEventListener("click", downloadPngExport);
+    els.pngExportModal.addEventListener("click", event => {
+      if (event.target === els.pngExportModal) closePngExport();
+    });
     els.deleteBtn.addEventListener("click", deleteNote);
     els.confirmCancel.addEventListener("click", () => closeConfirm(false));
     els.confirmOk.addEventListener("click", () => closeConfirm(true));
@@ -3524,7 +3675,7 @@
       sidebarSwipeStartY = touch.clientY;
       sidebarSwipeMode = "";
 
-      const blockedTarget = event.target.closest("input, textarea, select, button, .lightbox, .confirm-modal");
+      const blockedTarget = event.target.closest("input, textarea, select, button, .lightbox, .confirm-modal, .png-export-modal");
       if (!isCompactViewport() || blockedTarget) {
         sidebarSwipeActive = false;
         return;
@@ -3584,6 +3735,10 @@
 
       if (event.key === "Escape" && !els.confirmModal.classList.contains("hidden")) {
         closeConfirm(false);
+      }
+
+      if (event.key === "Escape" && !els.pngExportModal.classList.contains("hidden")) {
+        closePngExport();
       }
 
       if (event.key === "Escape" && document.activeElement === els.noteSearch) {
